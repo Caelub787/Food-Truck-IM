@@ -31,6 +31,9 @@ export function LoginPage() {
   return (
     <AuthLayout title="Log in">
       <form onSubmit={submit} className="flex flex-col gap-4">
+        {import.meta.env.VITE_DEMO === '1' && (
+          <Notice>This is a demo. Log in as sam@example.com (admin), maria@example.com (manager), or jake@example.com (driver), with any password.</Notice>
+        )}
         {login.error && <Notice tone="error">{login.error}</Notice>}
         <Field label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field

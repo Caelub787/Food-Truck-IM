@@ -12,7 +12,8 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:db": "vitest run --project db",
-    "check": "npm run lint && npm run typecheck && npm test && npm run test:db"
+    "check": "npm run lint && npm run typecheck && npm test && npm run test:db",
+    "build:demo": "tsc -b && vite build --config vite.demo.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

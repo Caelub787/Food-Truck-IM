@@ -8,6 +8,8 @@ export const isConfigured = Boolean(url && key)
 
 export const supabase: SupabaseClient = createClient(url ?? 'http://localhost', key ?? 'missing', {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  // Look up fetch on each call (the demo swaps in its own pretend server).
+  global: { fetch: (input, init) => fetch(input, init) },
 })
 
 /** Calls an Edge Function and turns its error into a plain message. */

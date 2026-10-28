@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router'
+import { createBrowserRouter, createMemoryRouter, Navigate, type RouteObject } from 'react-router'
 import { AccountPage } from '@/features/account/AccountPage'
 import { CheckEmailPage } from '@/features/auth/CheckEmailPage'
 import { ConfirmPage } from '@/features/auth/ConfirmPage'
@@ -39,7 +39,7 @@ import { TrucksPage } from '@/features/setup/TrucksPage'
 import { AppShell } from './AppShell'
 import { MorePage } from './MorePage'
 
-export const router = createBrowserRouter([
+const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
   { path: '/signup', element: <SignUpPage /> },
   { path: '/signup/check-email', element: <CheckEmailPage /> },
@@ -104,4 +104,7 @@ export const router = createBrowserRouter([
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },
-])
+]
+
+// The demo runs inside a page frame where the address bar can't change.
+export const router = import.meta.env.VITE_DEMO === '1' ? createMemoryRouter(routes) : createBrowserRouter(routes)

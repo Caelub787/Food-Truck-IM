@@ -7,6 +7,7 @@ import { APP_NAME, ROLE_LABELS } from '@/lib/config'
 import { supabase } from '@/lib/supabase'
 import { navItems, tabItems } from './nav'
 import { QueueBanner } from './QueueBanner'
+import { DemoBar } from '@/demo/DemoBar'
 import { UpdatePrompt } from './UpdatePrompt'
 
 /**
@@ -70,6 +71,7 @@ export function AppShell() {
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-28 md:px-8 md:pt-8 md:pb-12">
+          {import.meta.env.VITE_DEMO === '1' && <DemoBar />}
           <UpdatePrompt />
           <QueueBanner />
           {me.company?.status === 'pending' && (

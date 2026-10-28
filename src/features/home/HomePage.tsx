@@ -88,7 +88,7 @@ function GettingStarted({ me }: { me: Me }) {
 
 function InstallCard() {
   const install = useInstallPrompt()
-  if (install.installed) return null
+  if (install.installed || import.meta.env.VITE_DEMO === '1') return null
   return (
     <Card className="flex gap-3">
       <Smartphone className="mt-0.5 size-6 shrink-0 text-brand-700" aria-hidden />

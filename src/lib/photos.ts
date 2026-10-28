@@ -41,6 +41,9 @@ export function usePhotoUrl(path: string | null | undefined) {
     enabled: Boolean(path),
     staleTime: 30 * 60_000,
     queryFn: async () => {
+      // The demo keeps photos in memory.
+      const demo = (globalThis as { __demoPhotos?: Map<string, string> }).__demoPhotos?.get(path!)
+      if (demo) return demo
       const { data, error } = await supabase.storage.from('photos').createSignedUrl(path!, 3600)
       if (error) throw error
       return data.signedUrl
