@@ -18,6 +18,7 @@ import { ReceivePage } from '@/features/inventory/ReceivePage'
 import { OrdersPage } from '@/features/orders/OrdersPage'
 import { OwnerPage } from '@/features/owner/OwnerPage'
 import { PeoplePage } from '@/features/people/PeoplePage'
+import { ReportsPage } from '@/features/reports/ReportsPage'
 import { SalesPage } from '@/features/sales/SalesPage'
 import { SchedulePage } from '@/features/schedule/SchedulePage'
 import { SalesUploadPage } from '@/features/sales/SalesUploadPage'
@@ -74,6 +75,7 @@ const routes: RouteObject[] = [
                   { path: 'inventory/waste', element: <WastePage /> },
                   { path: 'orders', element: <OrdersPage /> },
                   { path: 'flags', element: <FlagsPage /> },
+                  { path: 'reports', element: <ReportsPage /> },
                   { path: 'sales', element: <SalesPage /> },
                   { path: 'sales/upload', element: <SalesUploadPage /> },
                   { path: 'setup', element: <SetupHome /> },

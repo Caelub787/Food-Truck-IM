@@ -57,7 +57,8 @@ export function ResponsiveList<T>({
       </Card>
 
       <Card flush className="hidden md:block">
-        <div className="overflow-x-auto">
+        {/* relative keeps hidden screen reader labels inside the scroll box */}
+        <div className="relative overflow-x-auto">
           <table className="w-full text-left">
             <thead className="border-b border-slate-200 bg-slate-50 text-sm text-slate-500">
               <tr>

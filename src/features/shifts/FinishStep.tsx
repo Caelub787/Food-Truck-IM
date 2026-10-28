@@ -61,7 +61,7 @@ export function FinishStep({ ctx }: { ctx: ShiftCtx }) {
           Shift finished {shift.ended_at ? new Date(shift.ended_at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''}.
           Here's what it used.
         </Notice>
-        <ShiftResults shiftId={shift.id} catalog={c} showCost={isManager} compared={winningGroup(ctx.sales, ctx.settings)} />
+        <ShiftResults shiftId={shift.id} catalog={c} showCost={isManager} compared={winningGroup(ctx.sales, ctx.settings)} canFix={isManager} />
       </div>
     )
   }

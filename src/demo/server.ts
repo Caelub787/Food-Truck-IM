@@ -615,6 +615,73 @@ const rpcs: Record<string, (a: P) => [unknown, string[]?]> = {
     return [n, ['truck_pars']]
   },
   save_push_subscription: () => [null],
+
+  // Reports and fixes
+  report: ({ p_from, p_to, p_truck }) => [buildReport(p_from, p_to, p_truck)],
+  correct_shift_count: ({ p }) => {
+    if (!String(p.reason ?? '').trim()) throw new Error("Say why it's being changed, for the history.")
+    const s = shift(p.shift_id)
+    const c = db.shift_counts!.find((x) => x.shift_id === s.id && x.supply_id === p.supply_id && x.kind === p.kind)
+    const old = c ? Number(c.quantity) : null
+    if (c) c.quantity = p.quantity
+    else db.shift_counts!.push({ shift_id: s.id, supply_id: p.supply_id, kind: p.kind, quantity: p.quantity, expected: null, photo_path: null, entered_by: userId, client_ts: now() })
+    const r = db.shift_results!.find((x) => x.shift_id === s.id && x.supply_id === p.supply_id)
+    if (r) {
+      if (p.kind === 'end') r.end_qty = p.quantity
+      else r.start_qty = p.quantity
+      r.actual_qty = Number(r.start_qty) + Number(r.added_qty) - Number(r.end_qty) - Number(r.waste_qty)
+      if (r.expected_qty !== null) r.diff_qty = r.actual_qty - Number(r.expected_qty)
+    }
+    db.audit_log!.unshift({ id: Date.now(), actor_id: userId, action: 'correct', table_name: 'shift_counts', row_id: s.id, old_data: { supply_id: p.supply_id, kind: p.kind, quantity: old }, new_data: { supply_id: p.supply_id, kind: p.kind, quantity: p.quantity }, reason: p.reason, created_at: now() })
+    return [null, ['shift_counts', 'shift_results', 'audit_log']]
+  },
+}
+
+/** The reports screen's numbers, worked out from the sample data (simpler than the real one). */
+function buildReport(from: string, to: string, truck: string | null) {
+  const order = db.company_settings![0]!.sales_source_order as string[]
+  const group = (src: string) => (src === 'csv' || src === 'square' ? 'file' : src)
+  const shifts = db.shifts!.filter((s) => s.status === 'closed' && s.ended_at >= from && s.ended_at < to && (!truck || s.truck_id === truck))
+  const per = shifts.map((s) => {
+    const all = db.sales!.filter((x) => x.shift_id === s.id)
+    const source = order.find((g) => all.some((x) => group(x.source) === g)) ?? null
+    const sold = all.filter((x) => group(x.source) === source)
+    const res = db.shift_results!.filter((r) => r.shift_id === s.id)
+    const sum = (rows: Row[], f: (r: Row) => number) => rows.reduce((a, r) => a + f(r), 0)
+    return {
+      id: s.id, truck_id: s.truck_id, lead_id: s.lead_id, business_date: s.business_date, event_name: s.event_name, count_check_status: s.count_check_status,
+      drinks: sum(sold, (x) => Number(x.quantity)), free: sum(sold.filter((x) => x.is_free), (x) => Number(x.quantity)), revenue: sum(sold, (x) => Number(x.price)),
+      used: sum(res.filter((r) => r.supply_id), (r) => Math.max(Number(r.actual_qty), 0) * Number(r.unit_cost)),
+      waste: sum(db.waste_logs!.filter((w) => w.shift_id === s.id), (w) => Number(w.cost)),
+      off_cost: sum(res.filter((r) => r.diff_qty !== null), (r) => Math.abs(Number(r.diff_qty)) * Number(r.unit_cost)),
+      flagged: res.filter((r) => r.flagged).length, source, sold,
+    }
+  })
+  const total = (k: 'drinks' | 'free' | 'revenue' | 'used' | 'waste' | 'off_cost') => per.reduce((a, x) => a + x[k], 0)
+  const waste = db.waste_logs!.filter((w) => w.created_at >= from && w.created_at < to && (!truck || w.place_id === truck))
+  const groupBy = <T,>(rows: T[], key: (r: T) => string) => {
+    const m = new Map<string, T[]>()
+    for (const r of rows) m.set(key(r), [...(m.get(key(r)) ?? []), r])
+    return m
+  }
+  const results = db.shift_results!.filter((r) => per.some((x) => x.id === r.shift_id))
+  return {
+    totals: { shifts: per.length, drinks: total('drinks'), free: total('free'), revenue: total('revenue'), used: total('used'), shift_waste: total('waste'), off_cost: total('off_cost'), flagged_shifts: per.filter((x) => x.flagged > 0).length, all_waste: waste.reduce((a, w) => a + Number(w.cost), 0) },
+    shifts: per.map(({ sold: _sold, ...x }) => x),
+    supplies: [...groupBy(results, (r) => `${r.supply_id}|${r.group_id}`).values()].map((rows) => ({
+      supply_id: rows[0]!.supply_id, group_id: rows[0]!.group_id, shifts: rows.length,
+      actual: rows.reduce((a, r) => a + Number(r.actual_qty), 0),
+      expected: rows.some((r) => r.expected_qty !== null) ? rows.reduce((a, r) => a + Number(r.expected_qty ?? 0), 0) : null,
+      diff: rows.some((r) => r.diff_qty !== null) ? rows.reduce((a, r) => a + Number(r.diff_qty ?? 0), 0) : null,
+      cost: rows[0]!.supply_id ? rows.reduce((a, r) => a + Math.max(Number(r.actual_qty), 0) * Number(r.unit_cost), 0) : null,
+    })),
+    waste_reasons: [...groupBy(waste, (w) => w.reason_id ?? '').entries()].map(([k, rows]) => ({ reason_id: k || null, count: rows.length, cost: rows.reduce((a, w) => a + Number(w.cost), 0) })),
+    waste_supplies: [...groupBy(waste.filter((w) => w.supply_id), (w) => w.supply_id).entries()].map(([k, rows]) => ({ supply_id: k, quantity: rows.reduce((a, w) => a + Number(w.quantity), 0), cost: rows.reduce((a, w) => a + Number(w.cost), 0) })),
+    free_reasons: [...groupBy(per.flatMap((x) => x.sold.filter((s) => s.is_free)), (s) => s.free_reason_id ?? '').entries()].map(([k, rows]) => ({ reason_id: k || null, drinks: rows.reduce((a, s) => a + Number(s.quantity), 0), cost: rows.reduce((a, s) => a + Number(s.quantity) * 0.35, 0) })),
+    drivers: [...groupBy(per, (x) => x.lead_id).entries()].map(([k, rows]) => ({ user_id: k, shifts: rows.length, drinks: rows.reduce((a, x) => a + x.drinks, 0), revenue: rows.reduce((a, x) => a + x.revenue, 0), used: rows.reduce((a, x) => a + x.used, 0), waste: rows.reduce((a, x) => a + x.waste, 0), off_cost: rows.reduce((a, x) => a + x.off_cost, 0), flagged_shifts: rows.filter((x) => x.flagged > 0).length })),
+    count_checks: { done: per.filter((x) => x.count_check_status === 'done').length, missed: per.filter((x) => x.count_check_status === 'missed').length, waiting: per.filter((x) => x.count_check_status === 'waiting').length, different: 0 },
+    days: [...groupBy(per, (x) => x.business_date).entries()].map(([d, rows]) => ({ date: d, shifts: rows.length, drinks: rows.reduce((a, x) => a + x.drinks, 0), revenue: rows.reduce((a, x) => a + x.revenue, 0), used: rows.reduce((a, x) => a + x.used, 0), waste: rows.reduce((a, x) => a + x.waste, 0) })).sort((a, b) => a.date.localeCompare(b.date)),
+  }
 }
 
 // Login ----------------------------------------------------------------------------------------------

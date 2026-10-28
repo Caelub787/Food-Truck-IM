@@ -9,7 +9,7 @@
 // Screenshots land in test-results/screens. The script exits with an error if a check fails.
 const { chromium } = require('playwright')
 const path = require('node:path')
-const { setupTables, addShiftData, addSalesData, addPlanData } = require('./mock-data.cjs')
+const { setupTables, addShiftData, addSalesData, addPlanData, addReportData } = require('./mock-data.cjs')
 
 const OUT = process.env.OUT ?? path.join(__dirname, '../test-results/screens')
 const base = process.env.BASE_URL ?? 'http://localhost:4173'
@@ -640,6 +640,49 @@ async function runPlans(browser, size, label) {
   return { checks, errors }
 }
 
+async function runReports(browser, size, label) {
+  const { state, context, page, errors, shot, seen } = await openAsAdmin(browser, size, label)
+  addShiftData(state)
+  addSalesData(state)
+  addReportData(state)
+  const checks = []
+
+  await page.goto(`${base}/reports`)
+  await seen('Sales minus costs').waitFor()
+  await shot('90-reports')
+  for (const [tab, text, name] of [
+    ['Usage vs sales', 'Syrups (any flavor) (all together)', '91-report-usage'],
+    ['Waste', 'Waste by reason', '92-report-waste'],
+    ['Free drinks', 'Drop replacement', '93-report-free'],
+    ['Drivers', 'Ava Chen', '94-report-drivers'],
+    ['Count checks', 'Counts that differed', '95-report-checks'],
+    ['Shifts', 'Ball game', '96-report-shifts'],
+  ]) {
+    await page.getByRole('radio', { name: tab }).click()
+    await seen(text).waitFor()
+    await shot(name)
+  }
+  checks.push('every report opens')
+
+  // Maria fixes yesterday's ending cup count.
+  await page.goto(`${base}/shifts/sh-0?step=finish`)
+  await seen('Sales say').waitFor()
+  await page.getByText('Small shaved ice cup').filter({ visible: true }).first().click()
+  await page.getByRole('heading', { name: 'Fix Small shaved ice cup' }).waitFor()
+  await page.getByLabel('Right ending count', { exact: true }).fill('2')
+  await page.getByLabel('Why').fill('Recounted at the warehouse')
+  await shot('97-fix-count')
+  await page.getByRole('button', { name: 'Save the fix' }).click()
+  await seen('Fixes after the shift').waitFor()
+  await seen('Recounted at the warehouse').waitFor()
+  if (state.lastFix) throw new Error('unexpected')
+  checks.push('managers fix counts with a reason, and the history shows')
+  await shot('98-fix-history')
+
+  await context.close()
+  return { checks, errors }
+}
+
 async function runInventory(browser, size, label) {
   const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
   state.tables.profiles = state.people
@@ -688,7 +731,7 @@ async function runInventory(browser, size, label) {
     ['phone', { width: 390, height: 844 }],
     ['desktop', { width: 1366, height: 860 }],
   ]) {
-    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift, runSales, runPlans })[n]) : [run, runSetup, runInventory, runShift, runSales, runPlans])) {
+    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift, runSales, runPlans, runReports })[n]) : [run, runSetup, runInventory, runShift, runSales, runPlans, runReports])) {
       const { checks, errors } = await flow(browser, size, label)
       console.log(`${label} ${flow.name}: ${checks.length} checks passed: ${checks.join('; ')}`)
       if (errors.length) {

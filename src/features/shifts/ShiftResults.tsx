@@ -1,9 +1,14 @@
+import { useState } from 'react'
 import { ResponsiveList } from '@/components/ResponsiveList'
 import { Badge, Card, Notice, Spinner } from '@/components/ui'
 import { groupLabels, type SaleGroup } from '@/features/sales/data'
 import type { Catalog } from '@/features/setup/data'
 import { findUnit, formatAmount, formatMoney, formatNumber, type Unit } from '@/lib/units'
+import { CorrectionSheet } from './CorrectionSheet'
 import { useShiftResults, type ShiftResult } from './data'
+import { usePeopleNames } from '@/features/inventory/data'
+import { useLiveQuery } from '@/lib/live'
+import { supabase } from '@/lib/supabase'
 
 /** What a finished shift used, per supply and per supply group. */
 export function ShiftResults({
@@ -11,14 +16,18 @@ export function ShiftResults({
   catalog: c,
   showCost,
   compared,
+  canFix,
 }: {
   shiftId: string
   catalog: Catalog
   showCost: boolean
   /** The sales source used for expected usage, or null when there were no sales. */
   compared: SaleGroup | null
+  /** Managers can fix counts on finished shifts. */
+  canFix?: boolean
 }) {
   const results = useShiftResults(shiftId)
+  const [fixing, setFixing] = useState<string | null>(null)
   if (!results.data) return <Spinner />
   const unitOf = (r: ShiftResult): Unit => {
     if (r.supply_id) {
@@ -106,11 +115,62 @@ export function ShiftResults({
             ? [{ label: 'Cost', cell: (r: ShiftResult) => (r.supply_id ? formatMoney(Number(r.actual_qty) * Number(r.unit_cost)) : '') }]
             : []),
         ]}
+        onSelect={canFix ? (r) => r.supply_id && setFixing(r.id) : undefined}
+        actionLabel="Fix"
       />
+      {fixing && results.data.find((r) => r.id === fixing) && (
+        <CorrectionSheet shiftId={shiftId} result={results.data.find((r) => r.id === fixing)!} catalog={c} onClose={() => setFixing(null)} />
+      )}
+      <Corrections shiftId={shiftId} catalog={c} />
       <p className="text-sm text-slate-500">
         Used = started + added − left − waste.{' '}
         {compared ? 'Sales say = what the drinks sold (paid and free) should have used, from your recipes.' : 'No sales on this shift, so there is nothing to compare with.'}
       </p>
     </div>
+  )
+}
+
+type Correction = { id: number; actor_id: string | null; old_data: { supply_id: string; kind: string; quantity: number | null }; new_data: { quantity: number }; reason: string | null; created_at: string }
+
+/** Fixes made to this shift's counts after it finished, with who and why. */
+function Corrections({ shiftId, catalog: c }: { shiftId: string; catalog: Catalog }) {
+  const who = usePeopleNames()
+  const list = useLiveQuery({
+    tables: ['audit_log', 'shift_counts'],
+    queryKey: ['corrections', shiftId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('id, actor_id, old_data, new_data, reason, created_at')
+        .eq('table_name', 'shift_counts')
+        .eq('action', 'correct')
+        .eq('row_id', shiftId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data as Correction[]
+    },
+  })
+  if (!list.data || list.data.length === 0) return null
+  return (
+    <Card>
+      <h3 className="font-semibold">Fixes after the shift</h3>
+      <ul className="mt-2 divide-y divide-slate-100">
+        {list.data.map((x) => {
+          const s = c.supply(x.old_data.supply_id)
+          const unit = s ? findUnit(c.unitsOf(s.id), s.count_unit_id) : { id: null, name: '', factor: 1 }
+          return (
+            <li key={x.id} className="py-2">
+              <p>
+                <strong>{who(x.actor_id) || 'Someone'}</strong> changed the {x.old_data.kind === 'end' ? 'ending' : 'starting'} count of {s?.name ?? 'a supply'} from{' '}
+                {x.old_data.quantity === null ? 'nothing' : formatAmount(Number(x.old_data.quantity), unit)} to {formatAmount(Number(x.new_data.quantity), unit)}.
+              </p>
+              <p className="text-sm text-slate-500">
+                {x.reason} · {new Date(x.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              </p>
+            </li>
+          )
+        })}
+      </ul>
+    </Card>
   )
 }

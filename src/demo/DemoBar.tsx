@@ -25,7 +25,7 @@ export function DemoBar() {
   return (
     <div className="mb-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
       <p>
-        <strong>Demo with made up sample data.</strong> Try anything. Changes stay on this page and start over when you reload.
+        <strong>Demo with made up sample data.</strong> Try anything. Changes stay on this page and start over when you reload. Downloads (like CSV files) don't work here.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2" role="radiogroup" aria-label="View the app as">
         <span className="font-medium">View as:</span>

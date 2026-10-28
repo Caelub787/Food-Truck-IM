@@ -379,3 +379,45 @@ function addPlanData(state) {
 }
 
 module.exports.addPlanData = addPlanData
+
+// Report numbers and count fixes for the reports flow. Call after addSalesData.
+function addReportData(state) {
+  const t = state.tables
+  t.audit_log = []
+  const log = (name, fn) => (args) => {
+    state.calls.push(name)
+    return fn(args ?? {})
+  }
+  Object.assign(state.rpcs, {
+    report: log('report', () => ({
+      totals: { shifts: 2, drinks: 330, free: 12, revenue: 1312, used: 210.4, shift_waste: 3.1, off_cost: 9.5, flagged_shifts: 1, all_waste: 5.2 },
+      shifts: [
+        { id: 'sh-0', truck_id: 'tr-2', lead_id: 'u-d1', business_date: '2026-10-27', event_name: 'Ball game', count_check_status: 'done', drinks: 160, free: 10, revenue: 600, used: 96.2, waste: 0.5, off_cost: 7.2, flagged: 1, source: 'file' },
+        { id: 'sh-9', truck_id: 'tr-1', lead_id: 'u-d2', business_date: '2026-10-26', event_name: null, count_check_status: 'not_needed', drinks: 170, free: 2, revenue: 712, used: 114.2, waste: 2.6, off_cost: 2.3, flagged: 0, source: 'driver' },
+      ],
+      supplies: [
+        { supply_id: 's-cup-s', group_id: null, actual: 330, expected: 313, diff: 17, cost: 14.85, shifts: 2 },
+        { supply_id: null, group_id: 'grp-syrup', actual: 690, expected: 660, diff: 30, cost: null, shifts: 2 },
+        { supply_id: 's-ice', group_id: null, actual: 140, expected: 132, diff: 8, cost: 42, shifts: 2 },
+      ],
+      waste_reasons: [{ reason_id: 'wr-1', count: 3, cost: 3.1 }, { reason_id: 'wr-3', count: 1, cost: 2.1 }],
+      waste_supplies: [{ supply_id: 's-ice', quantity: 7, cost: 2.1 }, { supply_id: 's-cup-s', quantity: 20, cost: 0.9 }],
+      free_reasons: [{ reason_id: 'fr-0', drinks: 8, cost: 2.8 }, { reason_id: 'fr-2', drinks: 4, cost: 1.4 }],
+      drivers: [
+        { user_id: 'u-d1', shifts: 1, drinks: 160, revenue: 600, used: 96.2, waste: 0.5, off_cost: 7.2, flagged_shifts: 1 },
+        { user_id: 'u-d2', shifts: 1, drinks: 170, revenue: 712, used: 114.2, waste: 2.6, off_cost: 2.3, flagged_shifts: 0 },
+      ],
+      count_checks: { done: 1, missed: 0, waiting: 0, different: 1 },
+      days: [
+        { date: '2026-10-26', shifts: 1, drinks: 170, revenue: 712, used: 114.2, waste: 2.6 },
+        { date: '2026-10-27', shifts: 1, drinks: 160, revenue: 600, used: 96.2, waste: 0.5 },
+      ],
+    })),
+    correct_shift_count: log('correct_shift_count', ({ p }) => {
+      t.audit_log.unshift({ id: Date.now(), actor_id: state.me.user_id, action: 'correct', table_name: 'shift_counts', row_id: p.shift_id, old_data: { supply_id: p.supply_id, kind: p.kind, quantity: 120 }, new_data: { supply_id: p.supply_id, kind: p.kind, quantity: p.quantity }, reason: p.reason, created_at: new Date().toISOString() })
+      return null
+    }),
+  })
+}
+
+module.exports.addReportData = addReportData
