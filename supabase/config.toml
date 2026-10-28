@@ -1,0 +1,45 @@
+# Supabase CLI settings. Used for local development and deploys.
+project_id = "truckstock"
+
+[api]
+schemas = ["public"]
+max_rows = 1000
+
+[db]
+major_version = 17
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/**"]
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+# Invite and reset links last 24 hours (the most Supabase allows).
+otp_expiry = 86400
+
+[auth.email.template.confirmation]
+subject = "Confirm your email"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.invite]
+subject = "You're invited"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.recovery]
+subject = "Reset your password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your new email"
+content_path = "./supabase/templates/email_change.html"
+
+[functions.manage-invite]
+verify_jwt = true
+
+# Called by Supabase Cron with a shared secret instead of a login.
+[functions.send-outbox]
+verify_jwt = false

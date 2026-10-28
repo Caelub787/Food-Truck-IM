@@ -58,6 +58,18 @@ Run lint, typecheck, unit tests, and database tests before every push.
 9. The App Owner can see company info (name, admin, status, size, usage) through owner only functions, but never a company's inventory, sales, or people.
 10. Never trust anything the user can set (like Auth user metadata) for company or role. Company and role come only from the `profiles` table.
 
+## Writing migrations
+
+* New migration files go in `supabase/migrations/` named `YYYYMMDDHHMMSS_what_it_does.sql`. Never edit a migration that has been deployed. Until the first deploy (see Build status), editing is fine.
+* For every new table: `enable row level security`, policies, `revoke all ... from anon, authenticated`, then grant only what's needed to `authenticated`, and `grant all ... to service_role`.
+* For every new function: `revoke execute ... from public, anon, authenticated` naming the function, then grant to the roles that need it. Don't use `revoke ... on all functions` after the first migration, it would undo earlier grants.
+* Error messages raised in functions are shown to users as is, so write them in plain words.
+* Add tests in `tests/db/` and run `npm run test:db`.
+
+## Checking screens
+
+`scripts/phone-screens.cjs` clicks through the built app on a phone sized screen with a fake Supabase and saves screenshots (how to run it is at the top of the file). Use it after UI changes and look at the screenshots. Add new screens to it as they're built.
+
 ## Roles
 
 * App Owner: emails listed in the `app_owners` table (filled in at deploy time, never committed). Must have a confirmed email.
@@ -124,8 +136,8 @@ Do not build the Square connection until the owner asks. How it will be added:
 ## Build status
 
 Phases from `docs/PLAN.md`:
-0. Foundation: in progress
-1. Accounts: not started
+0. Foundation: done
+1. Accounts: built and tested locally (sign up, App Owner approvals, roles, invites, login, password reset, people, business settings, audit log, email outbox). Not deployed yet: waiting on the owner to finish docs/SETUP.md.
 2. Setup: not started
 3. Stock: not started
 4. Shifts: not started

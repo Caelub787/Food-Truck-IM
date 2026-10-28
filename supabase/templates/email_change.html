@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+  <body style="margin:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a">
+    <div style="max-width:520px;margin:0 auto;padding:24px">
+      <p style="font-weight:700;color:#0f766e;margin:0 0 24px">TruckStock</p>
+      <h2 style="margin:0 0 16px">Confirm your new email</h2>
+      <p style="margin:0 0 16px">Tap the button to confirm this is your new email address.</p>
+      <p style="margin:24px 0">
+        <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change"
+           style="background:#0f766e;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Confirm new email</a>
+      </p>
+      <p style="margin:0;color:#64748b;font-size:14px">If you didn't expect this email, you can ignore it.</p>
+    </div>
+  </body>
+</html>
