@@ -2,8 +2,7 @@ import { CheckCircle2, Circle, Smartphone } from 'lucide-react'
 import { Link, Navigate } from 'react-router'
 import { Button, Card } from '@/components/ui'
 import { useMeLoaded, type Me } from '@/features/auth/session'
-import { useLiveQuery } from '@/lib/live'
-import { supabase } from '@/lib/supabase'
+import { useSetupProgress } from '@/features/setup/useSetupProgress'
 import { useInstallPrompt } from './useInstallPrompt'
 
 export function HomePage() {
@@ -34,26 +33,27 @@ function DriverHome() {
 }
 
 function GettingStarted({ me }: { me: Me }) {
-  const people = useLiveQuery({
-    tables: ['profiles'],
-    queryKey: ['people-count', me.company?.id],
-    queryFn: async () => {
-      const { count, error } = await supabase.from('profiles').select('user_id', { count: 'exact', head: true })
-      if (error) throw error
-      return count ?? 0
-    },
-  })
-
+  const progress = useSetupProgress()
+  const p = progress.data
+  if (!p) return null
   const steps = [
     { label: 'Sign up your business', done: true },
     { label: 'Get approved', done: me.company?.status === 'active', note: 'We email you when it happens.' },
-    { label: 'Invite your managers and drivers', done: (people.data ?? 0) > 1, link: '/people' },
-    { label: 'Add your warehouse, trucks, supplies, and products', done: false, note: 'Coming in the next update.' },
+    { label: 'Add your trucks and locations', done: p.trucks > 0, link: '/setup/trucks' },
+    { label: 'Add supplies', done: p.supplies > 0, link: '/setup/supplies' },
+    { label: 'Add products and recipes', done: p.products > 0 && p.recipes > 0, link: '/setup/products' },
+    { label: 'Invite your managers and drivers', done: p.people > 1, link: '/people' },
   ]
+  if (steps.every((s) => s.done)) return null
 
   return (
     <Card>
-      <h2 className="font-semibold">Getting started</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold">Getting started</h2>
+        <Link to="/setup" className="text-sm font-medium text-brand-700">
+          Open setup
+        </Link>
+      </div>
       <ol className="mt-3 space-y-3">
         {steps.map((step) => (
           <li key={step.label} className="flex gap-3">

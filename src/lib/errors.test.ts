@@ -16,3 +16,15 @@ describe('friendlyError', () => {
     expect(friendlyError(null)).toBe('Something went wrong. Please try again.')
   })
 })
+
+describe('database errors', () => {
+  it('explains common database problems', () => {
+    expect(friendlyError({ message: 'duplicate key value violates unique constraint "trucks_name_idx"', code: '23505' })).toMatch(
+      /already used/,
+    )
+    expect(
+      friendlyError({ message: 'update or delete on table "places" violates foreign key constraint "x" on table "stock_levels"' }),
+    ).toMatch(/Turn it off instead/)
+    expect(friendlyError({ message: 'new row violates row-level security policy for table "trucks"' })).toMatch(/permission/)
+  })
+})

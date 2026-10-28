@@ -148,7 +148,19 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 }
 
 /** A panel that slides up from the bottom on phones and sits in the middle on bigger screens. */
-export function Sheet({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: ReactNode }) {
+export function Sheet({
+  title,
+  open,
+  onClose,
+  children,
+  wide,
+}: {
+  title: string
+  open: boolean
+  onClose: () => void
+  children: ReactNode
+  wide?: boolean
+}) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -160,7 +172,11 @@ export function Sheet({ title, open, onClose, children }: { title: string; open:
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
       <button className="absolute inset-0 bg-slate-900/40" aria-label="Close" onClick={onClose} />
-      <div className="relative max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:max-w-md sm:rounded-3xl">
+      <div
+        className={`relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:rounded-3xl ${
+          wide ? 'sm:max-w-2xl' : 'sm:max-w-md'
+        }`}
+      >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">{title}</h2>
           <button onClick={onClose} className="rounded-full p-2 text-slate-500 hover:bg-slate-100 active:bg-slate-100" aria-label="Close">

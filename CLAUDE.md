@@ -71,8 +71,8 @@ Run lint, typecheck, unit tests, and database tests before every push.
 
 ## Writing migrations
 
-* New migration files go in `supabase/migrations/` named `YYYYMMDDHHMMSS_what_it_does.sql`. Never edit a migration that has been deployed. Until the first deploy (see Build status), editing is fine.
-* For every new table: `enable row level security`, policies, `revoke all ... from anon, authenticated`, then grant only what's needed to `authenticated`, `grant all ... to service_role`, and `select app.enable_live(...)` for live updates.
+* New migration files go in `supabase/migrations/` named `YYYYMMDDHHMMSS_what_it_does.sql`. Never edit a migration that has been pushed: the owner may have deployed it already. Make a new migration instead.
+* For every new company table, call `select app.setup_table('public.<table>', <writer roles>, <reader roles>)`. It turns on row level security with the standard policies, sets grants, adds change history (audit) and live updates. Tables only changed through functions pass `'{}'` as writers.
 * For every new function: `revoke execute ... from public, anon, authenticated` naming the function, then grant to the roles that need it. Don't use `revoke ... on all functions` after the first migration, it would undo earlier grants.
 * Error messages raised in functions are shown to users as is, so write them in plain words.
 * Add tests in `tests/db/` and run `npm run test:db`.
@@ -149,7 +149,7 @@ Do not build the Square connection until the owner asks. How it will be added:
 Phases from `docs/PLAN.md`:
 0. Foundation: done
 1. Accounts: built and tested locally (sign up, App Owner approvals, roles, invites, login, password reset, people, business settings, audit log, email outbox). Not deployed yet: waiting on the owner to finish docs/SETUP.md.
-2. Setup: not started
+2. Setup: built and tested locally (settings and feature switches, lists, locations, trucks, suppliers, supplies with units and groups, products, sizes, add ons, versioned recipes, spreadsheet import, starter kits).
 3. Stock: not started
 4. Shifts: not started
 5. Waste: not started

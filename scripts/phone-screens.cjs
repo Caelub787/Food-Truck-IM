@@ -9,6 +9,7 @@
 // Screenshots land in test-results/screens. The script exits with an error if a check fails.
 const { chromium } = require('playwright')
 const path = require('node:path')
+const { setupTables } = require('./mock-data.cjs')
 
 const OUT = process.env.OUT ?? path.join(__dirname, '../test-results/screens')
 const base = process.env.BASE_URL ?? 'http://localhost:4173'
@@ -34,6 +35,8 @@ function freshState() {
       { user_id: 'u-d2', full_name: 'Ava Chen', email: 'ava@iceco.com', phone: null, role: 'driver', active: true, invited_at: '2026-10-20', joined_at: null },
       { user_id: 'u-d3', full_name: 'Leo Park', email: 'leo@iceco.com', phone: null, role: 'driver', active: false, invited_at: '2026-09-01', joined_at: '2026-09-02' },
     ],
+    tables: setupTables(),
+    rpcs: {},
     companies: [
       { id: 'c2', name: 'Bean There Coffee Trucks', status: 'pending', created_at: '2026-10-27T15:00:00Z', status_changed_at: null, status_reason: null, phone: '555 0200', truck_count_estimate: 4, signup_note: 'Found you through a friend.', timezone: 'America/Denver', admin_name: 'Dana Wu', admin_email: 'dana@beanthere.com', member_count: 1, last_active_at: '2026-10-27T15:05:00Z' },
       { id: 'c1', name: 'Island Ice Co', status: 'active', created_at: '2026-10-01T15:00:00Z', status_changed_at: '2026-10-01T16:00:00Z', status_reason: null, phone: '555 0100', truck_count_estimate: 6, signup_note: null, timezone: 'America/Chicago', admin_name: 'Sam Rivera', admin_email: 'sam@iceco.com', member_count: 5, last_active_at: '2026-10-28T12:00:00Z' },
@@ -56,12 +59,34 @@ async function mockSupabase(page, state) {
     if (p === '/rest/v1/rpc/my_context') return json(route, state.me)
     if (p === '/rest/v1/rpc/owner_list_companies') return json(route, state.companies)
     if (p === '/rest/v1/rpc/owner_stats') return json(route, { database_bytes: 31 * 1024 * 1024, database_limit_bytes: 500 * 1024 * 1024, companies: { active: 1, pending: state.companies.filter((c) => c.status === 'pending').length }, people: 6 })
-    if (p.startsWith('/rest/v1/rpc/')) return json(route, null)
+    if (p === '/rest/v1/rpc/setup_progress') {
+      const t = state.tables
+      return json(route, { locations: t.locations.length, trucks: t.trucks.length, suppliers: t.suppliers.length, supplies: t.supplies.length, products: t.products.length, recipes: t.recipe_versions.length, people: state.people.length })
+    }
+    if (p.startsWith('/rest/v1/rpc/')) {
+      const name = p.slice('/rest/v1/rpc/'.length)
+      const handler = state.rpcs[name]
+      return json(route, handler ? handler(req.postDataJSON()) : null)
+    }
     if (p === '/rest/v1/profiles') {
       if (req.method() === 'HEAD') return route.fulfill({ status: 200, headers: { ...cors, 'content-range': `0-0/${state.people.length}` } })
       return json(route, state.people)
     }
     if (p === '/functions/v1/manage-invite') return json(route, { ok: true, action: 'invite' })
+    const table = p.startsWith('/rest/v1/') ? p.slice('/rest/v1/'.length) : null
+    if (table && state.tables[table]) {
+      if (req.method() !== 'GET') return json(route, req.method() === 'POST' ? { id: `new-${Date.now()}` } : null)
+      let rows = state.tables[table]
+      for (const [key, value] of new URL(req.url()).searchParams) {
+        if (value.startsWith('eq.')) rows = rows.filter((r) => String(r[key]) === value.slice(3))
+        if (value.startsWith('in.(')) {
+          const allowed = value.slice(4, -1).split(',')
+          rows = rows.filter((r) => allowed.includes(String(r[key])))
+        }
+      }
+      if ((req.headers()['accept'] ?? '').includes('vnd.pgrst.object')) return json(route, rows[0] ?? null)
+      return json(route, rows)
+    }
     return json(route, { message: `not mocked ${p}` }, 404)
   })
 
@@ -227,6 +252,82 @@ async function run(browser, size, label) {
   return { checks, errors }
 }
 
+/** Opens a fresh logged in page as an admin of an approved business. */
+async function openAsAdmin(browser, size, label) {
+  const state = freshState()
+  state.me.company.status = 'active'
+  const context = await browser.newContext({ viewport: size, deviceScaleFactor: 2, serviceWorkers: 'block' })
+  const page = await context.newPage()
+  const errors = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  page.on('console', (m) => m.type() === 'error' && !m.text().includes('404') && errors.push(m.text()))
+  const live = await mockSupabase(page, state)
+  await page.goto(`${base}/login`)
+  await page.getByLabel('Email').fill(user.email)
+  await page.getByLabel('Password').fill('secret123')
+  await page.getByRole('button', { name: 'Log in' }).click()
+  await page.getByText('Live', { exact: true }).filter({ visible: true }).first().waitFor()
+  const shot = (name) => page.screenshot({ path: `${OUT}/${label}-${name}.png`, fullPage: true })
+  const seen = (text) => page.getByText(text).filter({ visible: true }).first()
+  return { state, context, page, live, errors, shot, seen }
+}
+
+async function runSetup(browser, size, label) {
+  const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
+  const checks = []
+
+  await page.goto(`${base}/setup`)
+  await seen('Starter kits').waitFor()
+  await shot('20-setup')
+
+  await page.goto(`${base}/setup/supplies`)
+  await seen('Whole milk').waitFor()
+  await shot('21-supplies')
+
+  // A manager adds a supply on another device.
+  await markPage(page)
+  state.tables.supplies.push({ ...state.tables.supplies[0], id: 's-new', name: 'Vanilla syrup', category: 'Syrup', count_unit_id: null, purchase_unit_id: null })
+  live.signal('company:c1', 'supplies')
+  await seen('Vanilla syrup').waitFor({ timeout: 3000 })
+  await assertNoReload(page, 'new supply')
+  checks.push('supplies list updates live')
+
+  await seen('Whole milk').click()
+  await page.getByRole('heading', { name: 'Whole milk' }).waitFor()
+  await shot('22-supply-editor')
+  await page.getByRole('button', { name: 'Close' }).last().click()
+
+  await page.goto(`${base}/setup/products`)
+  await seen('Latte').waitFor()
+  await shot('23-products')
+  await page.goto(`${base}/setup/products/p-latte`)
+  await seen('Recipe for one large').waitFor()
+  await shot('24-product-editor')
+
+  await page.goto(`${base}/setup/addons`)
+  await seen('Oat milk').waitFor()
+  await seen('Swaps Whole milk for Oat milk').waitFor()
+  checks.push('add on effects read back in plain words')
+  await shot('25-addons')
+
+  for (const [path, text, name] of [
+    ['/setup/trucks', 'Coffee Van', '26-trucks'],
+    ['/setup/locations', 'Storage unit B', '27-locations'],
+    ['/setup/suppliers', 'Dairy Co', '28-suppliers'],
+    ['/setup/lists', 'Waste reasons', '29-lists'],
+    ['/setup/import', 'Download template', '30-import'],
+    ['/settings', 'Manager count checks', '31-settings'],
+  ]) {
+    await page.goto(`${base}${path}`)
+    await seen(text).waitFor()
+    await shot(name)
+  }
+  checks.push('every setup screen opens')
+
+  await context.close()
+  return { checks, errors }
+}
+
 ;(async () => {
   require('node:fs').mkdirSync(OUT, { recursive: true })
   const browser = await chromium.launch()
@@ -235,11 +336,13 @@ async function run(browser, size, label) {
     ['phone', { width: 390, height: 844 }],
     ['desktop', { width: 1366, height: 860 }],
   ]) {
-    const { checks, errors } = await run(browser, size, label)
-    console.log(`${label}: ${checks.length} checks passed: ${checks.join('; ')}`)
-    if (errors.length) {
-      failed = true
-      console.log(`${label} page errors:`, errors)
+    for (const flow of [run, runSetup]) {
+      const { checks, errors } = await flow(browser, size, label)
+      console.log(`${label} ${flow.name}: ${checks.length} checks passed: ${checks.join('; ')}`)
+      if (errors.length) {
+        failed = true
+        console.log(`${label} page errors:`, errors)
+      }
     }
   }
   await browser.close()

@@ -1,23 +1,12 @@
-import { Building2, Home, LogOut, ShieldCheck, UserRound, Users, type LucideIcon } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
 import { useMeLoaded, type Me } from '@/features/auth/session'
 import { LiveBadge } from '@/features/live/LiveBadge'
+import { useSettings } from '@/features/settings/useSettings'
 import { APP_NAME, ROLE_LABELS } from '@/lib/config'
 import { supabase } from '@/lib/supabase'
+import { navItems, tabItems } from './nav'
 import { UpdatePrompt } from './UpdatePrompt'
-
-type NavItem = { to: string; label: string; short: string; icon: LucideIcon }
-
-function navItems(me: Me): NavItem[] {
-  const role = me.profile?.role
-  const items: NavItem[] = []
-  if (me.profile) items.push({ to: '/', label: 'Home', short: 'Home', icon: Home })
-  if (role === 'admin' || role === 'manager') items.push({ to: '/people', label: 'People', short: 'People', icon: Users })
-  if (role === 'admin') items.push({ to: '/settings', label: 'Business settings', short: 'Business', icon: Building2 })
-  if (me.is_owner) items.push({ to: '/owner', label: 'App owner', short: 'Owner', icon: ShieldCheck })
-  items.push({ to: '/account', label: 'My account', short: 'Me', icon: UserRound })
-  return items
-}
 
 /**
  * The frame around every logged in screen. Phones get a top bar and a tab bar
@@ -25,7 +14,9 @@ function navItems(me: Me): NavItem[] {
  */
 export function AppShell() {
   const me = useMeLoaded()
-  const items = navItems(me)
+  const settings = useSettings()
+  const items = navItems(me, settings.data)
+  const tabs = tabItems(items)
 
   return (
     <div className="min-h-dvh md:flex">
@@ -90,7 +81,7 @@ export function AppShell() {
 
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
           <div className="mx-auto flex max-w-md">
-            {items.map((item) => (
+            {tabs.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
