@@ -1,4 +1,4 @@
-import { Boxes, Building2, Home, MoreHorizontal, Settings2, ShieldCheck, Truck, UserRound, Users, type LucideIcon } from 'lucide-react'
+import { Boxes, Building2, Home, MoreHorizontal, Receipt, Settings2, ShieldCheck, Truck, UserRound, Users, type LucideIcon } from 'lucide-react'
 import type { Me } from '@/features/auth/session'
 import type { Settings } from '@/features/settings/useSettings'
 import type { Role } from '@/lib/config'
@@ -20,6 +20,7 @@ const items: NavItem[] = [
   { to: '/', label: 'Home', short: 'Home', icon: Home },
   { to: '/shifts', label: 'Shifts', short: 'Shifts', icon: Truck },
   { to: '/inventory', label: 'Inventory', short: 'Stock', icon: Boxes, roles: ['admin', 'manager'] },
+  { to: '/sales', label: 'Sales', short: 'Sales', icon: Receipt, roles: ['admin', 'manager'] },
   { to: '/setup', label: 'Setup', short: 'Setup', icon: Settings2, roles: ['admin', 'manager'] },
   { to: '/people', label: 'People', short: 'People', icon: Users, roles: ['admin', 'manager'] },
   { to: '/settings', label: 'Business settings', short: 'Business', icon: Building2, roles: ['admin'] },

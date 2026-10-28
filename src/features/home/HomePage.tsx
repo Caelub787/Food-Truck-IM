@@ -4,6 +4,7 @@ import { Button, Card } from '@/components/ui'
 import { useMeLoaded, type Me } from '@/features/auth/session'
 import { FlagsCard } from '@/features/flags/FlagsCard'
 import { useSetupProgress } from '@/features/setup/useSetupProgress'
+import { CountChecksCard } from '@/features/shifts/CountChecksCard'
 import { GoingNow, MyShiftCard } from '@/features/shifts/ShiftsPage'
 import { useInstallPrompt } from './useInstallPrompt'
 
@@ -23,6 +24,7 @@ export function HomePage() {
           <>
             <GettingStarted me={me} />
             <FlagsCard />
+            <CountChecksCard />
           </>
         )}
         <GoingNow />

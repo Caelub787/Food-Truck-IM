@@ -159,7 +159,7 @@ Phases from `docs/PLAN.md`:
 3. Stock: built and tested locally (stock levels, one log of every move, deliveries, counts, moves between places, adjustments, expiration batches used oldest first, history with CSV export).
 4. Shifts: built and tested locally (start or join a shift, Lead and crew, starting count filled in with what the app expects, loading list from par levels, loading checklist, ending count, returns, finish with saved results, start count mismatch flags, offline queue).
 5. Waste: built and tested locally (supplies or whole drinks with add ons, reasons, photos shrunk on the phone, warehouse waste for managers, waste page with CSV).
-6. Sales: not started
+6. Sales: built and tested locally (driver and manager drink counts with free drinks, sales file upload with column guessing, item matching that's remembered, undo, source priority and mismatch flags, manager count checks, expected vs actual with limits and flags).
 7. Scheduling: not started
 8. Automation: not started
 9. Extras: not started

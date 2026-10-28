@@ -1,5 +1,6 @@
 import type { Me } from '@/features/auth/session'
 import type { Movement, StockLevel } from '@/features/inventory/data'
+import type { Sale } from '@/features/sales/data'
 import type { Catalog, Location, Truck } from '@/features/setup/data'
 import type { Settings } from '@/features/settings/useSettings'
 import type { CrewRow, Shift, ShiftCount, TruckPar, WasteLog } from './data'
@@ -16,6 +17,7 @@ export type ShiftCtx = {
   moves: Movement[]
   pars: TruckPar[]
   waste: WasteLog[]
+  sales: Sale[]
   crew: CrewRow[]
   me: Me
   /** The Lead, or a manager or admin. */

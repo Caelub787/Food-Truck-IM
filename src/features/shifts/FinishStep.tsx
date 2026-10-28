@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ConfirmButton } from '@/components/ConfirmButton'
 import { Badge, Button, Card, Notice, Select } from '@/components/ui'
 import { newClientId } from '@/features/inventory/data'
+import { winningGroup } from '@/features/sales/data'
 import { friendlyError } from '@/lib/errors'
 import { sendOrQueue } from '@/lib/offline'
 import { findUnit, formatAmount } from '@/lib/units'
@@ -60,7 +61,7 @@ export function FinishStep({ ctx }: { ctx: ShiftCtx }) {
           Shift finished {shift.ended_at ? new Date(shift.ended_at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''}.
           Here's what it used.
         </Notice>
-        <ShiftResults shiftId={shift.id} catalog={c} showCost={isManager} />
+        <ShiftResults shiftId={shift.id} catalog={c} showCost={isManager} compared={winningGroup(ctx.sales, ctx.settings)} />
       </div>
     )
   }

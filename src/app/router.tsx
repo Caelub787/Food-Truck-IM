@@ -16,6 +16,8 @@ import { MovePage } from '@/features/inventory/MovePage'
 import { ReceivePage } from '@/features/inventory/ReceivePage'
 import { OwnerPage } from '@/features/owner/OwnerPage'
 import { PeoplePage } from '@/features/people/PeoplePage'
+import { SalesPage } from '@/features/sales/SalesPage'
+import { SalesUploadPage } from '@/features/sales/SalesUploadPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { AddOnsPage } from '@/features/setup/AddOnsPage'
 import { ImportPage } from '@/features/setup/ImportPage'
@@ -66,6 +68,8 @@ export const router = createBrowserRouter([
                   { path: 'inventory/move', element: <MovePage /> },
                   { path: 'inventory/history', element: <HistoryPage /> },
                   { path: 'inventory/waste', element: <WastePage /> },
+                  { path: 'sales', element: <SalesPage /> },
+                  { path: 'sales/upload', element: <SalesUploadPage /> },
                   { path: 'setup', element: <SetupHome /> },
                   { path: 'setup/locations', element: <LocationsPage /> },
                   { path: 'setup/trucks', element: <TrucksPage /> },

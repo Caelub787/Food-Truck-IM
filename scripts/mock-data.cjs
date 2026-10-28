@@ -121,6 +121,10 @@ function addShiftData(state) {
   t.shift_checklist = []
   t.waste_logs = []
   t.waste_lines = []
+  t.sales = []
+  t.sales_imports = []
+  t.item_mappings = []
+  t.sales_file_formats = []
   t.shift_results = [
     { id: 'r-1', shift_id: 'sh-0', supply_id: 's-cup-s', group_id: null, start_qty: 200, added_qty: 100, end_qty: 120, waste_qty: 3, actual_qty: 177, expected_qty: null, diff_qty: null, unit_cost: 0.045, flagged: false, flag_reason: null },
     { id: 'r-2', shift_id: 'sh-0', supply_id: 's-cherry', group_id: null, start_qty: 256, added_qty: 0, end_qty: 100, waste_qty: 0, actual_qty: 156, expected_qty: null, diff_qty: null, unit_cost: 0.117, flagged: false, flag_reason: null },
@@ -225,3 +229,71 @@ function addShiftData(state) {
 }
 
 module.exports.addShiftData = addShiftData
+
+// Sales on yesterday's shift (a driver count and a file), an upload, and a
+// count check waiting. Call after addShiftData.
+function addSalesData(state) {
+  const t = state.tables
+  const iso = (msAgo) => new Date(Date.now() - msAgo).toISOString()
+  t.shifts.find((s) => s.id === 'sh-0').count_check_status = 'waiting'
+  t.shift_counts.push(
+    { shift_id: 'sh-0', supply_id: 's-cup-s', kind: 'end', quantity: 120, expected: null, photo_path: null, entered_by: 'u-d1', client_ts: iso(86400e3) },
+    { shift_id: 'sh-0', supply_id: 's-cup-l', kind: 'end', quantity: 80, expected: null, photo_path: null, entered_by: 'u-d1', client_ts: iso(86400e3) },
+  )
+  t.stock_levels.push({ place_id: 'tr-2', supply_id: 's-cup-s', quantity: 120, updated_at: iso(0) }, { place_id: 'tr-2', supply_id: 's-cup-l', quantity: 80, updated_at: iso(0) })
+  Object.assign(t.shift_results.find((r) => r.id === 'r-1'), { expected_qty: 160, diff_qty: 17, flagged: true, flag_reason: 'Small shaved ice cup: used 17 more than sales show (11%)' })
+  Object.assign(t.shift_results.find((r) => r.id === 'r-3'), { expected_qty: 150, diff_qty: 6, flagged: false })
+  t.sales_imports = [
+    { id: 'imp-1', source: 'csv', file_name: 'square-oct-27.csv', rows_added: 158, rows_duplicate: 0, rows_ignored: 4, rows_unmatched: 0, rows_no_shift: 2, unmatched_names: [], undone_at: null, created_by: 'u-m1', created_at: iso(20 * 3600e3) },
+  ]
+  const sale = (id, shift, truck, size, qty, price, source, extra = {}) => ({
+    id, truck_id: truck, shift_id: shift, sold_at: iso(26 * 3600e3), product_size_id: size, modifier_ids: [], quantity: qty, price, is_free: false,
+    free_reason_id: null, source, source_ref: `${shift}:${id}`, outside_name: null, import_id: null, client_ts: iso(26 * 3600e3), ...extra,
+  })
+  t.sales = [
+    sale('sa-1', 'sh-0', 'tr-2', 'ps-ice-s', 150, 600, 'csv', { import_id: 'imp-1' }),
+    sale('sa-2', 'sh-0', 'tr-2', 'ps-ice-s', 10, 0, 'csv', { import_id: 'imp-1', is_free: true }),
+    sale('sa-3', 'sh-0', 'tr-2', 'ps-ice-s', 148, 592, 'driver'),
+    sale('sa-4', 'sh-0', 'tr-2', 'ps-ice-s', 12, 0, 'driver', { is_free: true, free_reason_id: 'fr-0' }),
+  ]
+  t.item_mappings = [{ id: 'im-1', source: 'csv', kind: 'item', outside_key: 'shaved ice · large', outside_name: 'Shaved Ice · Large', product_size_id: 'ps-ice-l', modifier_id: null, truck_id: null, ignore: false }]
+  t.sales_file_formats = []
+
+  const shift = (id) => t.shifts.find((s) => s.id === id)
+  const log = (name, fn) => (args) => {
+    state.calls.push(name)
+    return fn(args ?? {})
+  }
+  Object.assign(state.rpcs, {
+    save_sales_tally: log('save_sales_tally', ({ p }) => {
+      const s = shift(p.shift_id)
+      const source = state.me.profile.role === 'driver' ? 'driver' : 'manager'
+      for (const l of p.lines) {
+        const ref = `${s.id}:${l.key}`
+        t.sales = t.sales.filter((x) => !(x.source === source && x.source_ref === ref))
+        if (l.quantity > 0) t.sales.push(sale(`sa-${Math.random()}`, s.id, s.truck_id, l.product_size_id, l.quantity, l.is_free ? 0 : l.quantity * 4, source, { source_ref: ref, modifier_ids: l.modifier_ids, is_free: l.is_free, free_reason_id: l.free_reason_id, client_ts: l.client_ts, sold_at: s.started_at }))
+      }
+      return null
+    }),
+    record_count_check: log('record_count_check', ({ p }) => {
+      const s = shift(p.shift_id)
+      for (const l of p.lines) t.shift_counts.push({ shift_id: s.id, supply_id: l.supply_id, kind: 'check', quantity: l.quantity, expected: null, photo_path: null, entered_by: state.me.user_id, client_ts: new Date().toISOString() })
+      s.count_check_status = 'done'
+      return null
+    }),
+    ingest_sales: log('ingest_sales', ({ p }) => {
+      state.lastIngest = p
+      if (!t.sales_imports.some((i) => i.id === p.import_id)) t.sales_imports.unshift({ id: p.import_id, source: 'csv', file_name: p.file_name, rows_added: 0, rows_duplicate: 0, rows_ignored: 0, rows_unmatched: 0, rows_no_shift: 0, unmatched_names: [], undone_at: null, created_by: state.me.user_id, created_at: new Date().toISOString() })
+      const imp = t.sales_imports.find((i) => i.id === p.import_id)
+      imp.rows_added += p.rows.length
+      return { import_id: p.import_id, added: p.rows.length, duplicates: 0, ignored: 0, unmatched: 0, no_shift: 0, unmatched_names: [] }
+    }),
+    undo_sales_import: log('undo_sales_import', ({ p_import_id }) => {
+      t.sales_imports.find((i) => i.id === p_import_id).undone_at = new Date().toISOString()
+      t.sales = t.sales.filter((x) => x.import_id !== p_import_id)
+      return 1
+    }),
+  })
+}
+
+module.exports.addSalesData = addSalesData

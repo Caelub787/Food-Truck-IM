@@ -5,12 +5,14 @@ import { ConfirmButton } from '@/components/ConfirmButton'
 import { Badge, Button, Card, Notice, Spinner } from '@/components/ui'
 import { useMeLoaded } from '@/features/auth/session'
 import { usePeopleNames, useStockLevels } from '@/features/inventory/data'
+import { useShiftSales } from '@/features/sales/data'
 import { useSettings } from '@/features/settings/useSettings'
 import { BackLink } from '@/features/setup/BackLink'
 import { useLocations, useSupplyCatalog, useTrucks } from '@/features/setup/data'
 import { rpc } from '@/lib/supabase'
 import { useAction } from '@/lib/useAction'
 import type { ShiftCtx } from './context'
+import { CountCheckStep } from './CountCheckStep'
 import { CountStep } from './CountStep'
 import { CrewSheet } from './CrewSheet'
 import {
@@ -26,9 +28,10 @@ import {
 } from './data'
 import { FinishStep } from './FinishStep'
 import { LoadStep } from './LoadStep'
+import { SalesStep } from './SalesStep'
 import { WasteStep } from './WasteStep'
 
-type StepKey = 'start' | 'load' | 'waste' | 'end' | 'finish'
+type StepKey = 'start' | 'load' | 'waste' | 'sales' | 'end' | 'finish' | 'check'
 
 /** One shift, step by step: starting count, load, waste, ending count, finish. */
 export function ShiftPage() {
@@ -41,6 +44,7 @@ export function ShiftPage() {
   const counts = useShiftCounts(id)
   const moves = useShiftMoves(id)
   const waste = useShiftWaste(id)
+  const sales = useShiftSales(id)
   const pars = useTruckPars()
   const levels = useStockLevels()
   const catalog = useSupplyCatalog()
@@ -55,7 +59,7 @@ export function ShiftPage() {
   })
 
   const s = shift.data
-  if (shift.isLoading || !catalog.data || !levels.data || !crew.data || !counts.data || !moves.data || !waste.data || !pars.data) {
+  if (shift.isLoading || !catalog.data || !levels.data || !crew.data || !counts.data || !moves.data || !waste.data || !sales.data || !pars.data) {
     return <Spinner />
   }
   if (!s) {
@@ -81,6 +85,7 @@ export function ShiftPage() {
     moves: moves.data,
     pars: pars.data,
     waste: waste.data,
+    sales: sales.data,
     crew: crew.data,
     me,
     canLead: s.lead_id === me.user_id || role === 'admin' || role === 'manager',
@@ -93,12 +98,19 @@ export function ShiftPage() {
 
   const stage = shiftStage(s)
   const loads = moves.data.filter((m) => m.kind === 'load').length
+  const isManager = role === 'admin' || role === 'manager'
+  const reporters = settings.data?.sales_reporters ?? 'drivers'
+  const showSales = sales.data.length > 0 || (reporters !== 'none' && (isManager || reporters !== 'managers'))
+  const drinks = sales.data.reduce((sum, x) => sum + Number(x.quantity), 0)
+  const showCheck = isManager && s.status === 'closed' && s.count_check_status !== 'not_needed'
   const steps: { key: StepKey; label: string; done: boolean; note?: string }[] = [
     { key: 'start', label: 'Starting count', done: Boolean(s.start_confirmed_at) },
     { key: 'load', label: 'Load', done: loads > 0, note: loads > 0 ? `${loads} loaded` : undefined },
     { key: 'waste', label: 'Waste', done: false, note: waste.data.length > 0 ? `${waste.data.length} logged` : undefined },
+    ...(showSales ? [{ key: 'sales' as const, label: 'Sales', done: false, note: drinks > 0 ? `${drinks} drinks` : undefined }] : []),
     { key: 'end', label: 'Ending count', done: Boolean(s.end_confirmed_at) },
     { key: 'finish', label: s.status === 'closed' ? 'Results' : 'Finish', done: s.status === 'closed' },
+    ...(showCheck ? [{ key: 'check' as const, label: 'Count check', done: s.count_check_status === 'done' }] : []),
   ]
   const defaultStep: StepKey = stage === 'start' ? 'start' : stage === 'working' ? 'load' : 'finish'
   const step = (params.get('step') as StepKey | null) ?? defaultStep
@@ -175,6 +187,8 @@ export function ShiftPage() {
           {step === 'start' && <CountStep ctx={ctx} kind="start" key="start" onConfirmed={() => go('load')} />}
           {step === 'load' && <LoadStep ctx={ctx} />}
           {step === 'waste' && <WasteStep ctx={ctx} />}
+          {step === 'sales' && <SalesStep ctx={ctx} />}
+          {step === 'check' && <CountCheckStep ctx={ctx} />}
           {step === 'end' && <CountStep ctx={ctx} kind="end" key="end" onConfirmed={() => go('finish')} />}
           {step === 'finish' && <FinishStep ctx={ctx} />}
           {stage === 'working' && step !== 'end' && (

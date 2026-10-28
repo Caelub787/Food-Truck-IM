@@ -1,54 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { call, insertAs, level, stockSetup, type Json } from './fixtures'
+import { call, insertAs, level, shiftSetup, stockSetup, type Json } from './fixtures'
 import { addMember, as, createCompany, sql, type User } from './helpers'
-
-/** A business with stock on a truck, a Lead, a crew member, and a drink with a recipe. */
-async function shiftSetup() {
-  const base = await stockSetup()
-  const { c, warehouse, truck, supply } = base
-  const lead = await addMember(c.id, 'driver')
-  const crew = await addMember(c.id, 'driver')
-  const manager = await addMember(c.id, 'manager')
-  const cups = await supply('Cups', { base_unit: 'each', cost_per_base: 0.1 })
-  const ice = await supply('Ice', { base_unit: 'lb', cost_per_base: 0.3 })
-  const group = await insertAs(c.admin, 'supply_groups', { name: 'Syrups', base_unit: 'oz' })
-  const cherry = await supply('Cherry', { group_id: group.id, cost_per_base: 0.1 })
-  const blue = await supply('Blue', { group_id: group.id, cost_per_base: 0.1 })
-  await call(c.admin, 'receive_delivery', {
-    location_id: warehouse,
-    lines: [cups, ice, cherry, blue].map((id) => ({ supply_id: id, quantity: 1000 })),
-  })
-  await call(c.admin, 'transfer_stock', {
-    from_place_id: warehouse,
-    to_place_id: truck,
-    lines: [
-      { supply_id: cups, quantity: 100 },
-      { supply_id: ice, quantity: 50 },
-      { supply_id: cherry, quantity: 128 },
-      { supply_id: blue, quantity: 64 },
-    ],
-  })
-  const product = await insertAs(c.admin, 'products', { name: 'Shaved ice' })
-  const small = await insertAs(c.admin, 'product_sizes', { product_id: product.id, name: 'Small' })
-  await as(c.admin, (q) =>
-    q(`select public.save_recipe($1, $2)`, [
-      small.id,
-      JSON.stringify([
-        { supply_id: cups, quantity: 1 },
-        { supply_id: ice, quantity: 0.5 },
-        { group_id: group.id, quantity: 2 },
-      ]),
-    ]),
-  )
-  const start = async (who: User = lead, extra: Json = {}) =>
-    (await call(who, 'start_shift', { truck_id: truck, crew_ids: [crew.id], ...extra }))[0]!.r as string
-  const fn = (who: User, name: string, ...args: unknown[]) =>
-    as(who, (q) => q(`select public.${name}(${args.map((_, i) => `$${i + 1}`).join(', ')}) as r`, args))
-  const counts = (who: User, shift: string, kind: 'start' | 'end', lines: [string, number | null][]) =>
-    call(who, 'save_shift_counts', { shift_id: shift, kind, lines: lines.map(([supply_id, quantity]) => ({ supply_id, quantity })) })
-  return { ...base, lead, crew, manager, cups, ice, group: group.id, cherry, blue, small: small.id, start, fn, counts }
-}
 
 const result = async (shift: string, key: { supply?: string; group?: string }) =>
   (

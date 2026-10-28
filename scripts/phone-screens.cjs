@@ -9,7 +9,7 @@
 // Screenshots land in test-results/screens. The script exits with an error if a check fails.
 const { chromium } = require('playwright')
 const path = require('node:path')
-const { setupTables, addShiftData } = require('./mock-data.cjs')
+const { setupTables, addShiftData, addSalesData } = require('./mock-data.cjs')
 
 const OUT = process.env.OUT ?? path.join(__dirname, '../test-results/screens')
 const base = process.env.BASE_URL ?? 'http://localhost:4173'
@@ -468,6 +468,99 @@ async function runShift(browser, size, label) {
   return { checks, errors }
 }
 
+async function runSales(browser, size, label) {
+  const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
+  addShiftData(state)
+  addSalesData(state)
+  const checks = []
+
+  // Jake counts drinks on his shift: two small, then a free large with a reason.
+  state.me.user_id = 'u-d1'
+  state.me.profile = { full_name: 'Jake Turner', role: 'driver', active: true, phone: null, joined_at: '2026-10-03' }
+  state.tables.shifts.find((s) => s.id === 'sh-1').start_confirmed_at = new Date().toISOString()
+  await page.goto(`${base}/shifts/sh-1?step=sales`)
+  await page.getByLabel('Small Shaved ice sold', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'One more sold' }).first().click()
+  await page.getByRole('button', { name: 'One more sold' }).first().click()
+  for (let i = 0; i < 30 && !state.calls.includes('save_sales_tally'); i++) await page.waitForTimeout(100)
+  if (!state.calls.includes('save_sales_tally')) throw new Error('Tally was not saved')
+  await page.getByRole('button', { name: /Drinks with add ons, or free drinks/ }).click()
+  await page.getByRole('radio', { name: 'Free' }).click()
+  await page.getByLabel('Why was it free?').selectOption({ label: 'Drop replacement' })
+  await page.getByLabel('Drink', { exact: true }).selectOption({ label: 'Shaved ice' })
+  await page.getByLabel('Size', { exact: true }).selectOption({ label: 'Large' })
+  await shot('70-free-drink')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await seen('Free: Drop replacement').waitFor()
+  await seen('3 drinks · 1 free').waitFor()
+  for (let i = 0; i < 30 && state.tables.sales.filter((x) => x.shift_id === 'sh-1').length < 2; i++) await page.waitForTimeout(100)
+  if (state.tables.sales.filter((x) => x.shift_id === 'sh-1').length !== 2) throw new Error('Free drink was not saved')
+  checks.push('drivers count paid and free drinks')
+  await shot('71-sales-tally')
+
+  // Maria, a manager: yesterday's shift waits for a count check.
+  state.me.user_id = 'u-m1'
+  state.me.profile = { full_name: 'Maria Lopez', role: 'manager', active: true, phone: null, joined_at: '2026-10-02' }
+  await page.goto(`${base}/`)
+  await seen('Count checks waiting').waitFor()
+  await page.getByRole('link', { name: /Truck 2/ }).first().click()
+  await page.getByLabel('Small shaved ice cup amount', { exact: true }).waitFor()
+  if (await page.getByText('Driver counted').count()) throw new Error('Blind count check showed the driver count')
+  await page.getByLabel('Small shaved ice cup amount', { exact: true }).fill('2.2')
+  await page.getByLabel('Large shaved ice cup amount', { exact: true }).fill('1.6')
+  await shot('72-count-check')
+  await page.getByRole('button', { name: 'Save count check' }).click()
+  await seen('Count check done.').waitFor()
+  checks.push('blind count check saves and then shows both counts')
+  await shot('73-count-check-done')
+
+  await page.goto(`${base}/shifts/sh-0?step=sales`)
+  await seen('Sales on this shift').waitFor()
+  await seen('Used').waitFor()
+  await shot('74-shift-sales')
+  await page.goto(`${base}/shifts/sh-0?step=finish`)
+  await seen('Sales say').waitFor()
+  await seen('Compared with the sales file').waitFor()
+  checks.push('results show expected and the difference')
+  await shot('75-results-compared')
+
+  await page.goto(`${base}/sales`)
+  await seen('square-oct-27.csv').waitFor()
+  await markPage(page)
+  state.tables.sales.push({ ...state.tables.sales[0], id: 'sa-live', shift_id: null, truck_id: 'tr-3', quantity: 7, price: 35, source: 'csv', sold_at: new Date().toISOString() })
+  live.signal('company:c1', 'sales')
+  await seen('No shift').waitFor({ timeout: 3000 })
+  await assertNoReload(page, 'new sales')
+  checks.push('sales page updates live')
+  await shot('76-sales')
+
+  await page.goto(`${base}/sales/upload`)
+  const csv = [
+    'Date,Time,Time Zone,Category,Item,Qty,Price Point Name,SKU,Modifiers Applied,Gross Sales,Discounts,Net Sales,Tax,Transaction ID,Event Type',
+    '2026-10-28,13:01:00,Central,Ice,Shaved Ice,1,Small,,,$4.00,$0.00,$4.00,$0.00,T1,Payment',
+    '2026-10-28,13:05:00,Central,Ice,Shaved Ice,2,Large,,,$12.00,$0.00,$12.00,$0.00,T2,Payment',
+    '2026-10-28,13:09:00,Central,Hot,Hot Cocoa,1,Regular,,,$3.00,$0.00,$3.00,$0.00,T3,Payment',
+    '2026-10-28,13:20:00,Central,Ice,Shaved Ice,1,Small,,,$4.00,$4.00,$0.00,$0.00,T4,Payment',
+  ].join('\n')
+  await page.locator('input[type=file]').setInputFiles({ name: 'square.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
+  await seen('4 sales found').waitFor()
+  await seen('1 to match').waitFor()
+  await page.getByLabel('These sales are all from').selectOption({ label: 'Truck 1' })
+  await shot('77-upload-match')
+  await page.getByLabel('Match for Hot Cocoa').selectOption({ label: 'Not a drink (skip it)' })
+  await seen('All matched').waitFor()
+  await page.getByRole('button', { name: 'Import 4 sales' }).click()
+  await seen('4 sales added').waitFor()
+  const sent = state.lastIngest
+  if (sent.mappings.length !== 2 || !sent.mappings.some((m) => m.outside_key === 'hot cocoa' && m.ignore)) throw new Error('Matches were not sent')
+  if (!sent.rows.find((r) => r.ref.startsWith('T4'))?.is_free) throw new Error('$0 sale should be free')
+  checks.push('sales file upload guesses columns and matches items')
+  await shot('78-upload-done')
+
+  await context.close()
+  return { checks, errors }
+}
+
 async function runInventory(browser, size, label) {
   const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
   state.tables.profiles = state.people
@@ -516,7 +609,7 @@ async function runInventory(browser, size, label) {
     ['phone', { width: 390, height: 844 }],
     ['desktop', { width: 1366, height: 860 }],
   ]) {
-    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift })[n]) : [run, runSetup, runInventory, runShift])) {
+    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift, runSales })[n]) : [run, runSetup, runInventory, runShift, runSales])) {
       const { checks, errors } = await flow(browser, size, label)
       console.log(`${label} ${flow.name}: ${checks.length} checks passed: ${checks.join('; ')}`)
       if (errors.length) {
