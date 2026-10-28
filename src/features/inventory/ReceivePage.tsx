@@ -5,11 +5,12 @@ import { TextArea } from '@/components/forms'
 import { Button, Card, Notice, PageHeader, Select, Spinner } from '@/components/ui'
 import { useSettings } from '@/features/settings/useSettings'
 import { BackLink } from '@/features/setup/BackLink'
+import { useOrderLines, useOrders } from '@/features/orders/data'
 import { useLocations, useSuppliers, useSupplyCatalog } from '@/features/setup/data'
 import { num } from '@/lib/data'
 import { refreshTables } from '@/lib/live'
 import { rpc } from '@/lib/supabase'
-import { findUnit, formatMoney } from '@/lib/units'
+import { clean, findUnit, formatMoney } from '@/lib/units'
 import { useAction } from '@/lib/useAction'
 import { newClientId } from './data'
 import { LinesEditor } from './LinesEditor'
@@ -27,6 +28,25 @@ export function ReceivePage() {
   const [lines, setLines] = useState<StockLine[]>([newLine()])
   const [note, setNote] = useState('')
   const [done, setDone] = useState<string | null>(null)
+  // Receiving against an order list fills in its supplier and lines.
+  const orderId = params.get('order')
+  const orders = useOrders()
+  const orderLines = useOrderLines()
+  const order = orders.data?.find((o) => o.id === orderId && (o.status === 'approved' || o.status === 'sent'))
+  const [filledFrom, setFilledFrom] = useState<string | null>(null)
+  if (order && catalog.data && orderLines.data && filledFrom !== order.id) {
+    setFilledFrom(order.id)
+    setSupplierId(order.supplier_id)
+    setLines(
+      orderLines.data
+        .filter((l) => l.order_id === order.id)
+        .map((l) => {
+          const line = deliveryLine(catalog.data!, l.supply_id)
+          const unit = findUnit(catalog.data!.unitsOf(l.supply_id), line.unit_id || null)
+          return { ...line, amount: String(clean(Number(l.quantity) / unit.factor, 3)) }
+        }),
+    )
+  }
 
   const activeLocations = (locations.data ?? []).filter((l) => l.active)
   const location = locationId || activeLocations.find((l) => l.kind === 'warehouse')?.id || activeLocations[0]?.id || ''
@@ -51,8 +71,10 @@ export function ReceivePage() {
         }
       })
     if (out.length === 0) throw new Error('Add at least one thing that came in.')
-    await rpc('receive_delivery', { p: { location_id: location, supplier_id: supplierId || null, note, client_id: newClientId(), lines: out } })
-    await refreshTables(queryClient, ['stock_levels', 'stock_movements', 'deliveries', 'supplies'])
+    await rpc('receive_delivery', {
+      p: { location_id: location, supplier_id: supplierId || null, purchase_order_id: order?.id ?? null, note, client_id: newClientId(), lines: out },
+    })
+    await refreshTables(queryClient, ['stock_levels', 'stock_movements', 'deliveries', 'supplies', 'purchase_orders'])
     setDone(`Delivery saved: ${out.length} item${out.length === 1 ? '' : 's'} added to stock.`)
     setLines([newLine()])
     setNote('')
@@ -69,6 +91,11 @@ export function ReceivePage() {
     <div>
       <BackLink to="/inventory" label="Inventory" />
       <PageHeader title="Receive a delivery" subtitle="Enter what came in. Stock and costs update right away." />
+      {order && (
+        <div className="mb-4">
+          <Notice>Filled in from the order list. Change anything that came in differently. Saving marks the order as received.</Notice>
+        </div>
+      )}
       {done && (
         <div className="mb-4">
           <Notice tone="success">

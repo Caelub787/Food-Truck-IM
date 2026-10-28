@@ -9,7 +9,7 @@
 // Screenshots land in test-results/screens. The script exits with an error if a check fails.
 const { chromium } = require('playwright')
 const path = require('node:path')
-const { setupTables, addShiftData, addSalesData } = require('./mock-data.cjs')
+const { setupTables, addShiftData, addSalesData, addPlanData } = require('./mock-data.cjs')
 
 const OUT = process.env.OUT ?? path.join(__dirname, '../test-results/screens')
 const base = process.env.BASE_URL ?? 'http://localhost:4173'
@@ -444,10 +444,10 @@ async function runShift(browser, size, label) {
   state.me.user_id = 'u-m1'
   state.me.profile = { full_name: 'Maria Lopez', role: 'manager', active: true, phone: null, joined_at: '2026-10-02' }
   await page.goto(`${base}/`)
-  await seen('Needs a look').waitFor()
+  await page.getByRole('heading', { name: 'Needs a look' }).waitFor()
   await shot('59-manager-home')
   await page.getByRole('button', { name: 'Looks fine' }).click()
-  await seen('Needs a look').waitFor({ state: 'detached' })
+  await page.getByRole('heading', { name: 'Needs a look' }).waitFor({ state: 'detached' })
   checks.push('managers clear flags')
   await page.goto(`${base}/shifts`)
   await seen('Past shifts').waitFor()
@@ -561,6 +561,85 @@ async function runSales(browser, size, label) {
   return { checks, errors }
 }
 
+async function runPlans(browser, size, label) {
+  const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
+  addShiftData(state)
+  addPlanData(state)
+  const checks = []
+
+  // Maria plans the week.
+  state.me.user_id = 'u-m1'
+  state.me.profile = { full_name: 'Maria Lopez', role: 'manager', active: true, phone: null, joined_at: '2026-10-02' }
+  await page.goto(`${base}/schedule`)
+  await seen('Riverside Park').waitFor()
+  await shot('80-schedule')
+  await page.getByRole('button', { name: 'Plan', exact: true }).click()
+  await page.getByLabel('Truck', { exact: true }).selectOption({ label: 'Coffee Van' })
+  await page.getByLabel('Lead', { exact: true }).selectOption({ label: 'Jake Turner' })
+  await page.getByLabel('Event (optional)').fill('Food truck Friday')
+  await shot('81-plan-sheet')
+  await page.getByRole('button', { name: 'Plan it' }).click()
+  await seen('Food truck Friday').waitFor()
+  if (!state.calls.includes('save_schedule')) throw new Error('Plan was not saved')
+  checks.push('managers plan shifts')
+
+  // Someone else plans one on their computer. It shows up here by itself.
+  await markPage(page)
+  state.tables.schedules.push({ ...state.tables.schedules[0], id: 'pl-live', event_name: 'Street fair', status: 'planned' })
+  live.signal('company:c1', 'schedules')
+  await seen('Street fair').waitFor({ timeout: 3000 })
+  await assertNoReload(page, 'new plan')
+  checks.push('the schedule updates live')
+
+  // Jake sees his shifts and starts today's from the plan.
+  state.me.user_id = 'u-d1'
+  state.me.profile = { full_name: 'Jake Turner', role: 'driver', active: true, phone: null, joined_at: '2026-10-03' }
+  state.tables.shifts.find((x) => x.id === 'sh-1').status = 'closed'
+  await page.goto(`${base}/`)
+  await seen('Your next shifts').waitFor()
+  await shot('82-driver-home-plans')
+  await page.goto(`${base}/schedule`)
+  await page.getByRole('button', { name: 'Start shift' }).first().click()
+  await page.getByRole('heading', { name: 'Start a shift' }).waitFor()
+  for (let i = 0; i < 30 && (await page.getByLabel('Truck', { exact: true }).inputValue()) !== 'tr-2'; i++) await page.waitForTimeout(100)
+  if ((await page.getByLabel('Truck', { exact: true }).inputValue()) !== 'tr-2') throw new Error('Plan did not fill in the truck')
+  if ((await page.getByLabel('Event or spot (optional)').inputValue()) !== 'Ball game') throw new Error('Plan did not fill in the event')
+  checks.push('starting from a plan fills in the shift')
+  await shot('83-start-from-plan')
+
+  // Maria approves an order list and receives the one that came in.
+  state.me.user_id = 'u-m1'
+  state.me.profile = { full_name: 'Maria Lopez', role: 'manager', active: true, phone: null, joined_at: '2026-10-02' }
+  await page.goto(`${base}/orders`)
+  await seen('Dairy Co').waitFor()
+  await shot('84-orders')
+  await page.getByRole('button', { name: 'Approve and email' }).click()
+  await page.getByRole('button', { name: 'Tap again to send it' }).click()
+  await seen('Nothing to order right now').waitFor()
+  if (!state.calls.includes('approve_purchase_order')) throw new Error('Order was not approved')
+  await page.getByRole('link', { name: 'It came in' }).first().click()
+  await seen('Filled in from the order list').waitFor()
+  checks.push('order lists are approved and received')
+  await shot('85-receive-order')
+
+  await page.goto(`${base}/flags`)
+  await seen("Starting count on Truck 2 didn't match").waitFor()
+  await shot('86-flags')
+  await page.goto(`${base}/setup/pars`)
+  await seen('Use the suggestions').waitFor()
+  await page.getByRole('button', { name: 'Use the suggestions' }).click()
+  await seen('Used 2 suggested par levels').waitFor()
+  checks.push('par suggestions can be used')
+  await shot('87-pars-suggested')
+  await page.goto(`${base}/account`)
+  await seen('Daily report').waitFor()
+  await shot('88-notifications')
+  checks.push('notification choices show')
+
+  await context.close()
+  return { checks, errors }
+}
+
 async function runInventory(browser, size, label) {
   const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
   state.tables.profiles = state.people
@@ -609,7 +688,7 @@ async function runInventory(browser, size, label) {
     ['phone', { width: 390, height: 844 }],
     ['desktop', { width: 1366, height: 860 }],
   ]) {
-    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift, runSales })[n]) : [run, runSetup, runInventory, runShift, runSales])) {
+    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift, runSales, runPlans })[n]) : [run, runSetup, runInventory, runShift, runSales, runPlans])) {
       const { checks, errors } = await flow(browser, size, label)
       console.log(`${label} ${flow.name}: ${checks.length} checks passed: ${checks.join('; ')}`)
       if (errors.length) {

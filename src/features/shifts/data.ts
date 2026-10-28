@@ -14,6 +14,7 @@ export type Shift = {
   business_date: string
   event_name: string | null
   notes: string | null
+  schedule_id: string | null
   started_at: string
   start_confirmed_at: string | null
   checklist_done_at: string | null

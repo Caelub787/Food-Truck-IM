@@ -1,4 +1,4 @@
-import { Boxes, Building2, Home, MoreHorizontal, Receipt, Settings2, ShieldCheck, Truck, UserRound, Users, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, Boxes, Building2, CalendarDays, Home, MoreHorizontal, Receipt, Settings2, ShieldCheck, Truck, UserRound, Users, type LucideIcon } from 'lucide-react'
 import type { Me } from '@/features/auth/session'
 import type { Settings } from '@/features/settings/useSettings'
 import type { Role } from '@/lib/config'
@@ -19,8 +19,10 @@ export type NavItem = {
 const items: NavItem[] = [
   { to: '/', label: 'Home', short: 'Home', icon: Home },
   { to: '/shifts', label: 'Shifts', short: 'Shifts', icon: Truck },
+  { to: '/schedule', label: 'Schedule', short: 'Schedule', icon: CalendarDays, feature: 'scheduling_enabled' },
   { to: '/inventory', label: 'Inventory', short: 'Stock', icon: Boxes, roles: ['admin', 'manager'] },
   { to: '/sales', label: 'Sales', short: 'Sales', icon: Receipt, roles: ['admin', 'manager'] },
+  { to: '/flags', label: 'Needs a look', short: 'Flags', icon: AlertTriangle, roles: ['admin', 'manager'] },
   { to: '/setup', label: 'Setup', short: 'Setup', icon: Settings2, roles: ['admin', 'manager'] },
   { to: '/people', label: 'People', short: 'People', icon: Users, roles: ['admin', 'manager'] },
   { to: '/settings', label: 'Business settings', short: 'Business', icon: Building2, roles: ['admin'] },

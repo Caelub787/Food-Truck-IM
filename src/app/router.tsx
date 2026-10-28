@@ -8,15 +8,18 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { SetPasswordPage } from '@/features/auth/SetPasswordPage'
 import { SignUpPage } from '@/features/auth/SignUpPage'
 import { WelcomePage } from '@/features/auth/WelcomePage'
+import { FlagsPage } from '@/features/flags/FlagsPage'
 import { HomePage } from '@/features/home/HomePage'
 import { CountPage } from '@/features/inventory/CountPage'
 import { HistoryPage } from '@/features/inventory/HistoryPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { MovePage } from '@/features/inventory/MovePage'
 import { ReceivePage } from '@/features/inventory/ReceivePage'
+import { OrdersPage } from '@/features/orders/OrdersPage'
 import { OwnerPage } from '@/features/owner/OwnerPage'
 import { PeoplePage } from '@/features/people/PeoplePage'
 import { SalesPage } from '@/features/sales/SalesPage'
+import { SchedulePage } from '@/features/schedule/SchedulePage'
 import { SalesUploadPage } from '@/features/sales/SalesUploadPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { AddOnsPage } from '@/features/setup/AddOnsPage'
@@ -58,6 +61,7 @@ export const router = createBrowserRouter([
               { path: 'more', element: <MorePage /> },
               { path: 'shifts', element: <ShiftsPage /> },
               { path: 'shifts/:id', element: <ShiftPage /> },
+              { path: 'schedule', element: <SchedulePage /> },
               {
                 element: <RequireRole roles={['admin', 'manager']} />,
                 children: [
@@ -68,6 +72,8 @@ export const router = createBrowserRouter([
                   { path: 'inventory/move', element: <MovePage /> },
                   { path: 'inventory/history', element: <HistoryPage /> },
                   { path: 'inventory/waste', element: <WastePage /> },
+                  { path: 'orders', element: <OrdersPage /> },
+                  { path: 'flags', element: <FlagsPage /> },
                   { path: 'sales', element: <SalesPage /> },
                   { path: 'sales/upload', element: <SalesUploadPage /> },
                   { path: 'setup', element: <SetupHome /> },

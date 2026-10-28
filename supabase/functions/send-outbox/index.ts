@@ -1,9 +1,11 @@
-// Sends whatever is waiting in the outbox. Supabase Cron calls this every
-// minute (see supabase/setup/cron.sql) with a shared secret.
+// Sends whatever is waiting in the outbox: emails, and push notifications to
+// every phone or computer the person turned them on for. Supabase Cron calls
+// this every minute (see supabase/setup/2-email-timer.sql) with a shared secret.
 import { adminClient } from '../_shared/clients.ts'
 import { sendMail } from '../_shared/email/mailer.ts'
 import { renderTemplate } from '../_shared/email/templates.ts'
 import { errorResponse, json, requireEnv } from '../_shared/http.ts'
+import { sendPush, type Subscription, type VapidKeys } from '../_shared/push/webpush.ts'
 
 type OutboxRow = {
   id: string
@@ -33,10 +35,13 @@ Deno.serve(async (req) => {
     let failed = 0
     for (const row of (data ?? []) as OutboxRow[]) {
       try {
-        if (row.channel !== 'email') throw new Error('Push notifications are not set up yet.')
-        const to = row.to_email ?? (await lookupEmail(admin, row.to_user))
-        if (!to) throw new Error('No email address for this message.')
-        await sendMail({ to, ...renderTemplate(row.template, row.payload, ctx) })
+        if (row.channel === 'push') {
+          await deliverPush(admin, row)
+        } else {
+          const to = row.to_email ?? (await lookupEmail(admin, row.to_user))
+          if (!to) throw new Error('No email address for this message.')
+          await sendMail({ to, ...renderTemplate(row.template, row.payload, ctx) })
+        }
         await admin.rpc('service_finish_outbox', { p_id: row.id, p_ok: true })
         sent++
       } catch (sendError) {
@@ -54,4 +59,29 @@ async function lookupEmail(admin: ReturnType<typeof adminClient>, userId: string
   if (!userId) return null
   const { data } = await admin.auth.admin.getUserById(userId)
   return data.user?.email ?? null
+}
+
+function vapidKeys(): VapidKeys | null {
+  const publicKey = Deno.env.get('VAPID_PUBLIC_KEY')
+  const privateKey = Deno.env.get('VAPID_PRIVATE_KEY')
+  if (!publicKey || !privateKey) return null
+  return { publicKey, privateKey, subject: Deno.env.get('VAPID_SUBJECT') ?? 'mailto:noreply@example.com' }
+}
+
+/** Sends to each device the person has. Devices that unsubscribed are forgotten. */
+async function deliverPush(admin: ReturnType<typeof adminClient>, row: OutboxRow) {
+  const keys = vapidKeys()
+  if (!keys) return // Push isn't set up yet (see docs/SETUP.md). Nothing to do.
+  const { data, error } = await admin.rpc('service_push_targets', { p_user: row.to_user })
+  if (error) throw error
+  const message = { title: row.payload.title, body: row.payload.body, url: row.payload.url ?? '/' }
+  let failures = 0
+  for (const sub of (data ?? []) as Subscription[]) {
+    try {
+      if ((await sendPush(sub, message, keys)) === 'gone') await admin.rpc('service_drop_push', { p_endpoint: sub.endpoint })
+    } catch {
+      failures++
+    }
+  }
+  if (failures > 0 && failures === (data ?? []).length) throw new Error('Push failed for every device.')
 }

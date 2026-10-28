@@ -1,4 +1,4 @@
-import { ArrowRightLeft, ClipboardCheck, History, PackagePlus, Trash2 } from 'lucide-react'
+import { ArrowRightLeft, ClipboardCheck, ClipboardList, History, PackagePlus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { EmptyState, SearchBox } from '@/components/forms'
@@ -56,6 +56,7 @@ export function InventoryPage() {
     { to: `/inventory/count?place=${placeId}`, label: 'Count', icon: ClipboardCheck },
     { to: `/inventory/move?from=${placeId}`, label: 'Move stock', icon: ArrowRightLeft },
     { to: `/inventory/waste?place=${placeId}`, label: 'Waste', icon: Trash2 },
+    { to: '/orders', label: 'Orders', icon: ClipboardList },
     { to: `/inventory/history?place=${placeId}`, label: 'History', icon: History },
   ]
 
@@ -95,7 +96,7 @@ export function InventoryPage() {
             <SearchBox value={search} onChange={setSearch} placeholder="Find a supply" />
           </div>
 
-          <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-5">
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
             {actions.map((a) => (
               <Link
                 key={a.label}

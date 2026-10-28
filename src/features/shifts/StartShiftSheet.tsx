@@ -4,6 +4,7 @@ import { Button, Field, Notice, Select, Sheet } from '@/components/ui'
 import { useMeLoaded } from '@/features/auth/session'
 import { newClientId } from '@/features/inventory/data'
 import { usePeople } from '@/features/people/people'
+import { usePlan } from '@/features/schedule/data'
 import { useTrucks } from '@/features/setup/data'
 import { isNetworkError } from '@/lib/offline'
 import { rpc } from '@/lib/supabase'
@@ -12,16 +13,26 @@ import { CrewPicker } from './CrewPicker'
 import { useOpenShifts, workers } from './data'
 
 /** Starting a shift: pick the truck, the Lead, and the crew. */
-export function StartShiftSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function StartShiftSheet({ open, onClose, planId }: { open: boolean; onClose: () => void; planId?: string | null }) {
   const me = useMeLoaded()
   const navigate = useNavigate()
   const trucks = useTrucks()
   const people = usePeople()
   const openShifts = useOpenShifts()
+  const plan = usePlan(planId ?? null)
   const [truckId, setTruckId] = useState('')
   const [lead, setLead] = useState(me.user_id)
   const [crew, setCrew] = useState<string[]>([])
   const [eventName, setEventName] = useState('')
+  // Starting from a plan fills in its truck, Lead, crew, and event (once it loads).
+  const [filledFrom, setFilledFrom] = useState<string | null>(null)
+  if (plan.data && filledFrom !== plan.data.id) {
+    setFilledFrom(plan.data.id)
+    setTruckId(plan.data.truck_id)
+    if (plan.data.lead_id) setLead(plan.data.lead_id)
+    setCrew(plan.data.crew)
+    setEventName(plan.data.event_name ?? '')
+  }
   const busyTrucks = new Set((openShifts.data ?? []).map((o) => o.truck_id))
   const active = (trucks.data ?? []).filter((t) => t.active)
   const truck = truckId || active.find((t) => !busyTrucks.has(t.id))?.id || ''
@@ -31,7 +42,14 @@ export function StartShiftSheet({ open, onClose }: { open: boolean; onClose: () 
     if (!lead) throw new Error('Pick a Lead.')
     try {
       const id = await rpc<string>('start_shift', {
-        p: { truck_id: truck, lead_id: lead, crew_ids: crew.filter((c) => c !== lead), event_name: eventName, client_id: newClientId() },
+        p: {
+          truck_id: truck,
+          lead_id: lead,
+          crew_ids: crew.filter((c) => c !== lead),
+          event_name: eventName,
+          schedule_id: plan.data?.id ?? null,
+          client_id: newClientId(),
+        },
       })
       onClose()
       navigate(`/shifts/${id}`)

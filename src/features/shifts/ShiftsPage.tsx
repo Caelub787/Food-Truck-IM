@@ -82,7 +82,7 @@ export function ShiftsPage() {
           actionLabel="Open"
         />
       )}
-      <StartShiftSheet open={starting} onClose={() => setStarting(false)} />
+      {starting && <StartShiftSheet open onClose={() => setStarting(false)} planId={params.get('plan')} />}
     </div>
   )
 }

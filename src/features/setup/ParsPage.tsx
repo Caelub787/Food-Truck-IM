@@ -5,10 +5,12 @@ import { CountInput } from '@/components/CountInput'
 import { EmptyState, SearchBox } from '@/components/forms'
 import { Button, Card, Notice, PageHeader, Select, Spinner } from '@/components/ui'
 import { useTruckPars } from '@/features/shifts/data'
+import { useRows } from '@/lib/data'
 import { ActionBar } from '@/features/shifts/SupplyCards'
 import { refreshTables } from '@/lib/live'
 import { matchesSearch } from '@/lib/search'
-import { supabase } from '@/lib/supabase'
+import { rpc, supabase } from '@/lib/supabase'
+import { formatAmount } from '@/lib/units'
 import { findUnit } from '@/lib/units'
 import { useAction } from '@/lib/useAction'
 import { BackLink } from './BackLink'
@@ -34,6 +36,17 @@ export function ParsPage() {
     Number(pars.data?.find((p) => p.truck_id === forTruck && p.supply_id === supplyId)?.par_quantity ?? 0) || null
   const value = (supplyId: string) => (supplyId in edits ? edits[supplyId]! : saved(supplyId))
   const changed = Object.keys(edits).filter((id) => (edits[id] ?? null) !== saved(id))
+  const suggestions = useRows<{ truck_id: string; supply_id: string; suggested_qty: number; avg_used: number; shifts_counted: number }>(
+    'par_suggestions',
+    { order: 'truck_id' },
+  )
+  const suggestion = (supplyId: string) => suggestions.data?.find((x) => x.truck_id === truckId && x.supply_id === supplyId)
+  const applySuggestions = useAction(async () => {
+    const n = await rpc<number>('apply_par_suggestions', { p_truck_id: truckId })
+    await refreshTables(queryClient, ['truck_pars'])
+    setEdits({})
+    setDone(`Used ${n} suggested par level${n === 1 ? '' : 's'} for ${truck?.name ?? 'the truck'}.`)
+  })
 
   const save = useAction(async () => {
     const upserts = changed.filter((id) => (edits[id] ?? 0) > 0).map((id) => ({ truck_id: truckId, supply_id: id, par_quantity: edits[id] }))
@@ -115,6 +128,15 @@ export function ParsPage() {
             )}
             <SearchBox value={search} onChange={setSearch} placeholder="Find a supply" />
           </div>
+          {(suggestions.data ?? []).some((x) => x.truck_id === truckId) && (
+            <div className="mb-4 flex flex-col gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 sm:flex-row sm:items-center sm:justify-between">
+              <span>Suggestions come from what this truck really used on its last shifts, plus your cushion. They update every week.</span>
+              <Button variant="secondary" busy={applySuggestions.busy} onClick={() => void applySuggestions.run()} className="shrink-0">
+                Use the suggestions
+              </Button>
+            </div>
+          )}
+          {applySuggestions.error && <Notice tone="error">{applySuggestions.error}</Notice>}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {supplies.map((s) => {
               const unit = findUnit(c.unitsOf(s.id), s.count_unit_id)
@@ -125,6 +147,12 @@ export function ParsPage() {
                     {s.name}
                     {s.category && <span className="ml-2 text-sm font-normal text-slate-500">{s.category}</span>}
                   </p>
+                  {suggestion(s.id) && (
+                    <p className="mb-2 text-sm text-slate-500">
+                      Suggested {formatAmount(Number(suggestion(s.id)!.suggested_qty), unit)} (uses about {formatAmount(Number(suggestion(s.id)!.avg_used), unit)} a
+                      shift)
+                    </p>
+                  )}
                   <CountInput
                     label={`${s.name} par level`}
                     unit={unit.name}

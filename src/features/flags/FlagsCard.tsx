@@ -19,9 +19,14 @@ export function FlagsCard() {
 
   return (
     <Card>
-      <div className="flex items-center gap-2">
-        <AlertTriangle className="size-5 text-amber-600" aria-hidden />
-        <h2 className="font-semibold">Needs a look</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="size-5 text-amber-600" aria-hidden />
+          <h2 className="font-semibold">Needs a look</h2>
+        </div>
+        <Link to="/flags" className="text-sm font-medium text-brand-700">
+          See all
+        </Link>
       </div>
       <ul className="mt-2 divide-y divide-slate-100">
         {flags.data.map((f) => (

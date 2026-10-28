@@ -4,6 +4,7 @@ import { Button, Card } from '@/components/ui'
 import { useMeLoaded, type Me } from '@/features/auth/session'
 import { FlagsCard } from '@/features/flags/FlagsCard'
 import { useSetupProgress } from '@/features/setup/useSetupProgress'
+import { UpcomingCard } from '@/features/schedule/UpcomingCard'
 import { CountChecksCard } from '@/features/shifts/CountChecksCard'
 import { GoingNow, MyShiftCard } from '@/features/shifts/ShiftsPage'
 import { useInstallPrompt } from './useInstallPrompt'
@@ -19,12 +20,16 @@ export function HomePage() {
       <h1 className="mb-4 text-2xl font-bold tracking-tight">Hi, {firstName}</h1>
       <div className="grid items-start gap-4 lg:grid-cols-2">
         {me.profile.role === 'driver' ? (
-          <MyShiftCard onStart={() => navigate('/shifts?start=1')} />
+          <>
+            <MyShiftCard onStart={() => navigate('/shifts?start=1')} />
+            <UpcomingCard />
+          </>
         ) : (
           <>
             <GettingStarted me={me} />
             <FlagsCard />
             <CountChecksCard />
+            <UpcomingCard />
           </>
         )}
         <GoingNow />

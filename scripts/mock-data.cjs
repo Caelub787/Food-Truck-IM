@@ -297,3 +297,85 @@ function addSalesData(state) {
 }
 
 module.exports.addSalesData = addSalesData
+
+// Plans for this week, an order list waiting for approval, par suggestions,
+// and notification choices. Call after addShiftData.
+function addPlanData(state) {
+  const t = state.tables
+  t.company_settings[0].scheduling_enabled = true
+  const at = (dayOffset, hour) => {
+    const d = new Date()
+    d.setDate(d.getDate() + dayOffset)
+    d.setHours(hour, 0, 0, 0)
+    return d.toISOString()
+  }
+  const plan = (id, truck, day, from, to, lead, crew, extra = {}) => {
+    t.schedules.push({ id, truck_id: truck, starts_at: at(day, from), ends_at: at(day, to), event_name: null, place: null, notes: null, lead_id: lead, status: 'planned', series_id: null, ...extra })
+    for (const u of crew) t.schedule_crew.push({ schedule_id: id, user_id: u })
+  }
+  t.schedules = []
+  t.schedule_crew = []
+  plan('pl-1', 'tr-2', 0, 11, 18, 'u-d1', ['u-d2'], { event_name: 'Ball game', place: 'Riverside Park' })
+  plan('pl-2', 'tr-3', 0, 7, 13, 'u-m1', [], { event_name: 'Office park' })
+  plan('pl-3', 'tr-1', 1, 12, 20, 'u-d1', [], { series_id: 'ser-1' })
+  plan('pl-4', 'tr-1', 2, 12, 20, 'u-d2', ['u-d1'], { status: 'cancelled' })
+  t.purchase_orders = [
+    { id: 'po-1', supplier_id: 'sup-1', status: 'draft', edited: false, note: null, estimated_total: 38.4, created_at: at(0, 6), approved_at: null, sent_at: null, received_at: null },
+    { id: 'po-2', supplier_id: 'sup-2', status: 'sent', edited: false, note: null, estimated_total: 45, created_at: at(-2, 6), approved_at: at(-2, 8), sent_at: at(-2, 8), received_at: null },
+  ]
+  t.purchase_order_lines = [
+    { order_id: 'po-1', supply_id: 's-milk', quantity: 768, unit_cost: 0.05 },
+    { order_id: 'po-2', supply_id: 's-cup-s', quantity: 1000, unit_cost: 0.045 },
+  ]
+  t.par_suggestions = [
+    { truck_id: 'tr-1', supply_id: 's-cup-s', suggested_qty: 350, avg_used: 280, shifts_counted: 8 },
+    { truck_id: 'tr-1', supply_id: 's-ice', suggested_qty: 120, avg_used: 92, shifts_counted: 8 },
+  ]
+  t.notification_settings = []
+  t.push_subscriptions = []
+  t.deliveries = []
+
+  const log = (name, fn) => (args) => {
+    state.calls.push(name)
+    return fn(args ?? {})
+  }
+  Object.assign(state.rpcs, {
+    save_schedule: log('save_schedule', ({ p }) => {
+      const id = p.id ?? `pl-new-${t.schedules.length}`
+      t.schedules = t.schedules.filter((x) => x.id !== id)
+      t.schedules.push({ id, truck_id: p.truck_id, starts_at: p.starts_at, ends_at: p.ends_at, event_name: p.event_name || null, place: p.place || null, notes: p.notes || null, lead_id: p.lead_id, status: 'planned', series_id: null })
+      t.schedule_crew = t.schedule_crew.filter((c) => c.schedule_id !== id)
+      for (const u of p.crew_ids) t.schedule_crew.push({ schedule_id: id, user_id: u })
+      return id
+    }),
+    cancel_schedule: log('cancel_schedule', ({ p_schedule_id }) => {
+      t.schedules.find((x) => x.id === p_schedule_id).status = 'cancelled'
+      return 1
+    }),
+    build_order_lists: log('build_order_lists', () => 1),
+    save_purchase_order: log('save_purchase_order', ({ p }) => {
+      t.purchase_order_lines = t.purchase_order_lines.filter((l) => l.order_id !== p.order_id)
+      for (const l of p.lines) t.purchase_order_lines.push({ order_id: p.order_id, supply_id: l.supply_id, quantity: l.quantity, unit_cost: 0.05 })
+      t.purchase_orders.find((o) => o.id === p.order_id).edited = true
+      return null
+    }),
+    approve_purchase_order: log('approve_purchase_order', ({ p_order_id }) => {
+      Object.assign(t.purchase_orders.find((o) => o.id === p_order_id), { status: 'sent', approved_at: new Date().toISOString(), sent_at: new Date().toISOString() })
+      return 'sent'
+    }),
+    set_purchase_order_status: log('set_purchase_order_status', ({ p_order_id, p_status }) => {
+      t.purchase_orders.find((o) => o.id === p_order_id).status = p_status
+      return null
+    }),
+    apply_par_suggestions: log('apply_par_suggestions', ({ p_truck_id }) => {
+      for (const sg of t.par_suggestions.filter((x) => x.truck_id === p_truck_id)) {
+        const par = t.truck_pars.find((x) => x.truck_id === sg.truck_id && x.supply_id === sg.supply_id)
+        if (par) par.par_quantity = sg.suggested_qty
+        else t.truck_pars.push({ truck_id: sg.truck_id, supply_id: sg.supply_id, par_quantity: sg.suggested_qty, low_quantity: null })
+      }
+      return 2
+    }),
+  })
+}
+
+module.exports.addPlanData = addPlanData

@@ -5,6 +5,7 @@ import type { CompanyStatus } from '@/lib/config'
 import { useLiveQuery } from '@/lib/live'
 import { rpc } from '@/lib/supabase'
 import { useAction } from '@/lib/useAction'
+import { PushKeysCard } from './PushKeysCard'
 
 type OwnerCompany = {
   id: string
@@ -90,6 +91,9 @@ export function OwnerPage() {
         {list.map((company) => (
           <CompanyCard key={company.id} company={company} />
         ))}
+      </div>
+      <div className="mt-8 lg:max-w-2xl">
+        <PushKeysCard />
       </div>
     </div>
   )

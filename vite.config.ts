@@ -31,6 +31,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Shows push notifications and opens the app when one is tapped.
+        importScripts: ['push-sw.js'],
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },

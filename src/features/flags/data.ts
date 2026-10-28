@@ -23,3 +23,22 @@ export function useOpenFlags(limit = 20) {
     },
   })
 }
+
+export type FlagRow = Flag & { status: 'open' | 'reviewed'; reviewed_by: string | null; reviewed_at: string | null; review_note: string | null }
+
+export function useFlags(status: 'open' | 'reviewed', limit = 200) {
+  return useLiveQuery({
+    tables: ['flags'],
+    queryKey: ['flags', status, limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('flags')
+        .select('*')
+        .eq('status', status)
+        .order(status === 'open' ? 'created_at' : 'reviewed_at', { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      return data as FlagRow[]
+    },
+  })
+}

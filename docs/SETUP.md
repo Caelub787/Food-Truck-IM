@@ -19,6 +19,8 @@ Keep a note open while you work. You'll copy a few values into it as you go:
 | Gmail app password | Step 2 |
 | App address | Step 3 |
 | Cron secret | Step 4 (you make it up) |
+| Backup passphrase | Step 5 (you make it up) |
+| Push keys | Step 8 (the app makes them) |
 
 ## Step 1: Supabase
 
@@ -96,6 +98,7 @@ In your Supabase project:
    | `SUPABASE_ACCESS_TOKEN` | your access token |
    | `SUPABASE_PROJECT_REF` | your Project ID |
    | `SUPABASE_DB_PASSWORD` | your database password |
+   | `BACKUP_PASSPHRASE` | make up another long password and keep it safe. Weekly backups are locked with it. |
 
 2. Open the **Actions** tab, pick **Deploy database and server functions**, and press **Run workflow**. Wait for the green check (a couple of minutes). This builds all the tables and security rules and uploads the server functions.
 
@@ -105,6 +108,7 @@ In Supabase, open **SQL Editor**, then **New query**.
 
 1. Make yourself the App Owner. Open `supabase/setup/1-app-owner.sql`, copy it in, change `you@example.com` to the email you'll sign up with, and press **Run**.
 2. Turn on the email timer. Open `supabase/setup/2-email-timer.sql`, copy it in, put in your Project URL and your cron secret where it says, and press **Run**.
+3. Turn on the automatic jobs (reports, alerts, reminders, order lists, par suggestions, photo cleanup). Open `supabase/setup/3-jobs-timer.sql`, copy it in, and press **Run**. Nothing to change in this one.
 
 ## Step 7: Sign up
 
@@ -116,12 +120,34 @@ In Supabase, open **SQL Editor**, then **New query**.
 
 When other businesses sign up, you get an email and they show up in the Owner tab for you to approve.
 
+## Step 8: Push notifications (optional, about 5 minutes)
+
+Push notifications are the alerts that pop up on phones (low stock, reminders, order lists). Emails work without this step.
+
+1. In the app, open the **Owner** tab and scroll down to **Push notification keys**. Tap **Make push keys**. Keep the page open.
+2. In Supabase, **Edge Functions**, then **Secrets**. Add three more:
+
+   | Name | Value |
+   |---|---|
+   | `VAPID_PUBLIC_KEY` | the public key |
+   | `VAPID_PRIVATE_KEY` | the private key |
+   | `VAPID_SUBJECT` | `mailto:` and your email, like `mailto:you@gmail.com` |
+
+3. In Cloudflare, open your app's **Settings**, then **Variables**. Add `VITE_VAPID_PUBLIC_KEY` with the public key, then redeploy (**Deployments**, then **Retry deployment** on the latest one).
+4. On each phone, open **My account** and turn on **Notifications on this device**. On an iPhone, add the app to the home screen first, then open it from there.
+
+## Backups
+
+Every Monday morning GitHub saves a copy of the whole database, locked with your backup passphrase, and keeps it for 30 days. Find them in the **Actions** tab, under **Weekly backup**, at the bottom of each run. To open one on a computer: `gpg --decrypt backup.tar.gz.gpg > backup.tar.gz`, then type the passphrase.
+
 ## If something doesn't work
 
 * **No emails arrive**: check the spam folder. Check the Gmail app password and that SMTP is turned on in Step 4. In Supabase, **Table Editor**, then the `outbox` table shows each email and any error.
 * **"That link didn't work"**: links work once and for 24 hours. Send a new invite from the People screen.
 * **The app says it isn't connected**: the two Cloudflare variables in Step 3 are missing or have a typo. Fix them and redeploy.
 * **The project is paused**: free Supabase projects pause after 7 days with nobody using them. Open the project in Supabase and press **Restore**. Nothing is lost.
+* **No reports or alerts**: check you ran `3-jobs-timer.sql` (Step 6). Reports go out at the hours in **Business settings**, in the business's time zone. Each person picks what they get in **My account**.
+* **No push notifications**: check Step 8, and that the phone allowed notifications for the app. In Supabase, the `outbox` table shows each one and any error.
 
 ## When you outgrow the free plans
 

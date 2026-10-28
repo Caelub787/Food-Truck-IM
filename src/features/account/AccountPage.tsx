@@ -5,6 +5,7 @@ import { useMeLoaded } from '@/features/auth/session'
 import { ROLE_LABELS } from '@/lib/config'
 import { rpc, supabase } from '@/lib/supabase'
 import { useAction } from '@/lib/useAction'
+import { NotificationsCard } from './NotificationsCard'
 
 export function AccountPage() {
   const me = useMeLoaded()
@@ -17,6 +18,7 @@ export function AccountPage() {
       <div className="grid items-start gap-4 lg:grid-cols-2">
         {me.profile && <ProfileForm />}
         <PasswordForm />
+        {me.profile && <NotificationsCard />}
       </div>
       <div className="mt-6 flex flex-col items-center gap-2 md:items-start">
         <Button variant="secondary" className="w-full md:w-auto" onClick={() => supabase.auth.signOut()}>

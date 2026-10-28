@@ -132,6 +132,8 @@ Drivers work with bad signal. Anything done on a shift (counts, loads, waste, re
 * Jobs write to an outbox table. An Edge Function sends the outbox (email and push).
 * Every job is idempotent: it records (company, job, period) in `job_runs` and skips if already done.
 * Anything sent outside the company (supplier orders) needs a manager to approve it first.
+* `app.run_due_jobs()` is the only timer entry point (see `supabase/setup/3-jobs-timer.sql`). New jobs go in it, use `app.claim_job`, and send through `app.notify` or `app.alert` (which respect each person's choices in `notification_settings`).
+* Flags about something true right now (low stock, open too long) use `app.raise_flag_once` and `app.resolve_flags`, so they don't nag and go away by themselves.
 
 ## Square (later, only when the owner says so)
 
@@ -160,7 +162,7 @@ Phases from `docs/PLAN.md`:
 4. Shifts: built and tested locally (start or join a shift, Lead and crew, starting count filled in with what the app expects, loading list from par levels, loading checklist, ending count, returns, finish with saved results, start count mismatch flags, offline queue).
 5. Waste: built and tested locally (supplies or whole drinks with add ons, reasons, photos shrunk on the phone, warehouse waste for managers, waste page with CSV).
 6. Sales: built and tested locally (driver and manager drink counts with free drinks, sales file upload with column guessing, item matching that's remembered, undo, source priority and mismatch flags, manager count checks, expected vs actual with limits and flags).
-7. Scheduling: not started
-8. Automation: not started
+7. Scheduling: built and tested locally (optional per business: weekly plans with Lead and crew, repeat weekly, clashes warned, drivers see their own, start a shift from a plan).
+8. Automation: built and tested locally (one 15 minute timer runs every job per business time zone: low stock, reminders, expiration, order lists with approval, morning email, daily, weekly, and monthly reports, par suggestions, pattern flags. Web Push with VAPID, photo cleanup, weekly encrypted backup).
 9. Extras: not started
 10. Square: waiting on the owner
