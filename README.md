@@ -4,6 +4,7 @@ Inventory, shifts, and usage tracking for food truck businesses. A phone first w
 
 * The plan: [docs/PLAN.md](docs/PLAN.md)
 * Going live on free plans: [docs/SETUP.md](docs/SETUP.md)
+* How to use it: [docs/GUIDE.md](docs/GUIDE.md)
 * Project rules: [CLAUDE.md](CLAUDE.md)
 
 ## Running it on a computer
@@ -13,6 +14,10 @@ npm install
 cp .env.example .env.local   # then fill in your Supabase URL and publishable key
 npm run dev
 ```
+
+## The demo
+
+`npm run build:demo` builds the app with a pretend server and made up sample data inside the page (no Supabase needed). `node scripts/build-demo-page.mjs demo.html` turns it into one file you can share.
 
 ## Checks
 

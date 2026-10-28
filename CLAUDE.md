@@ -53,6 +53,7 @@ Everything must run on free plans until the owner says otherwise. Don't add paid
 * `npm run lint`: lint
 * `npm test`: unit tests
 * `npm run test:db`: database tests (needs local Postgres, see `tests/db/README.md`)
+* `npm run build:demo`: the demo (the app with a pretend server and sample data in `src/demo/`). Screens that call a new database function need a matching handler in `src/demo/server.ts`, or the demo shows nothing for it.
 
 Run lint, typecheck, unit tests, and database tests before every push.
 
@@ -82,6 +83,8 @@ Drivers work with bad signal. Anything done on a shift (counts, loads, waste, re
 * Add tests in `tests/db/` and run `npm run test:db`.
 
 ## Checking screens
+
+`tests/db/rules.test.ts` checks every table follows the rules above (row level security with policies, a company id, live updates, nothing for logged out visitors, pinned search paths). A new internal table that only server functions touch goes in its `internal` list, with a reason.
 
 `scripts/phone-screens.cjs` clicks through the built app at phone and desktop sizes with a fake Supabase (including a fake live connection) and saves screenshots (how to run it is at the top of the file). It also checks that changes from "someone else" appear without a reload, and that the app reconnects by itself. Run it after UI changes and look at the screenshots. Add new screens and live checks to it as they're built. Use `.filter({ visible: true })` in its text checks, since phone and desktop versions of a screen can both be on the page.
 
@@ -164,5 +167,5 @@ Phases from `docs/PLAN.md`:
 6. Sales: built and tested locally (driver and manager drink counts with free drinks, sales file upload with column guessing, item matching that's remembered, undo, source priority and mismatch flags, manager count checks, expected vs actual with limits and flags).
 7. Scheduling: built and tested locally (optional per business: weekly plans with Lead and crew, repeat weekly, clashes warned, drivers see their own, start a shift from a plan).
 8. Automation: built and tested locally (one 15 minute timer runs every job per business time zone: low stock, reminders, expiration, order lists with approval, morning email, daily, weekly, and monthly reports, par suggestions, pattern flags. Web Push with VAPID, photo cleanup, weekly encrypted backup).
-9. Extras: not started
+9. Extras: built and tested locally (reports with CSV: usage vs sales, waste, free drinks, drivers, count checks, sales minus costs; manager fixes to finished shifts with history; demo mode; user guide in docs/GUIDE.md).
 10. Square: waiting on the owner
