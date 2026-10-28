@@ -58,6 +58,7 @@ export function CountInput({
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">{label}</span>
           <input
+            aria-label={label}
             inputMode="decimal"
             value={text}
             placeholder="0"

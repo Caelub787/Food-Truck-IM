@@ -1,12 +1,15 @@
 import { CheckCircle2, Circle, Smartphone } from 'lucide-react'
-import { Link, Navigate } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
 import { Button, Card } from '@/components/ui'
 import { useMeLoaded, type Me } from '@/features/auth/session'
+import { FlagsCard } from '@/features/flags/FlagsCard'
 import { useSetupProgress } from '@/features/setup/useSetupProgress'
+import { GoingNow, MyShiftCard } from '@/features/shifts/ShiftsPage'
 import { useInstallPrompt } from './useInstallPrompt'
 
 export function HomePage() {
   const me = useMeLoaded()
+  const navigate = useNavigate()
   if (!me.profile) return <Navigate to="/owner" replace />
   const firstName = me.profile.full_name.split(' ')[0]
 
@@ -14,21 +17,18 @@ export function HomePage() {
     <div>
       <h1 className="mb-4 text-2xl font-bold tracking-tight">Hi, {firstName}</h1>
       <div className="grid items-start gap-4 lg:grid-cols-2">
-        {me.profile.role === 'driver' ? <DriverHome /> : <GettingStarted me={me} />}
+        {me.profile.role === 'driver' ? (
+          <MyShiftCard onStart={() => navigate('/shifts?start=1')} />
+        ) : (
+          <>
+            <GettingStarted me={me} />
+            <FlagsCard />
+          </>
+        )}
+        <GoingNow />
         <InstallCard />
       </div>
     </div>
-  )
-}
-
-function DriverHome() {
-  return (
-    <Card>
-      <h2 className="font-semibold">Your shifts will show up here</h2>
-      <p className="mt-1 text-slate-600">
-        Starting and ending shifts, truck counts, and loading lists are coming in the next updates. For now, you're all set up.
-      </p>
-    </Card>
   )
 }
 

@@ -9,7 +9,7 @@
 // Screenshots land in test-results/screens. The script exits with an error if a check fails.
 const { chromium } = require('playwright')
 const path = require('node:path')
-const { setupTables } = require('./mock-data.cjs')
+const { setupTables, addShiftData } = require('./mock-data.cjs')
 
 const OUT = process.env.OUT ?? path.join(__dirname, '../test-results/screens')
 const base = process.env.BASE_URL ?? 'http://localhost:4173'
@@ -44,6 +44,9 @@ function freshState() {
   }
 }
 
+// A small red square, for photos.
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGO4Y2NDEmIY1TCqYfhqAABhl1QQ50OvrwAAAABJRU5ErkJggg=='
+
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*', 'Access-Control-Expose-Headers': 'content-range' }
 const json = (route, body, status = 200) =>
   route.fulfill({ status, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -52,6 +55,8 @@ async function mockSupabase(page, state) {
   await page.route('http://mock.supabase.test/**', async (route) => {
     const req = route.request()
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    // Playwright's offline mode doesn't stop mocked requests, so do it here.
+    if (state.offline) return route.abort('internetdisconnected')
     const p = new URL(req.url()).pathname
     if (p === '/auth/v1/token') return json(route, { access_token: jwt, token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, refresh_token: 'r', user })
     if (p === '/auth/v1/user') return json(route, user)
@@ -73,6 +78,15 @@ async function mockSupabase(page, state) {
       return json(route, state.people)
     }
     if (p === '/functions/v1/manage-invite') return json(route, { ok: true, action: 'invite' })
+    // Photo storage: uploads, signed links, and the photo itself.
+    if (p.startsWith('/storage/v1/object/sign/')) {
+      if (req.method() === 'GET') return route.fulfill({ status: 200, headers: { ...cors, 'Content-Type': 'image/png' }, body: Buffer.from(PNG, 'base64') })
+      return json(route, { signedURL: `${p.slice('/storage/v1'.length)}?token=t` })
+    }
+    if (p.startsWith('/storage/v1/object/photos/')) {
+      state.uploads = [...(state.uploads ?? []), p.slice('/storage/v1/object/photos/'.length)]
+      return json(route, { Key: p.slice('/storage/v1/object/'.length), Id: 'x' })
+    }
     const table = p.startsWith('/rest/v1/') ? p.slice('/rest/v1/'.length) : null
     if (table && state.tables[table]) {
       if (req.method() !== 'GET') return json(route, req.method() === 'POST' ? { id: `new-${Date.now()}` } : null)
@@ -165,7 +179,10 @@ async function run(browser, size, label) {
   check('approval shows up live')
   await shot('04-home-approved')
 
-  await page.getByRole('link', { name: 'People' }).first().click()
+  // On phones People is under More, on desktop it's in the side menu.
+  const people = page.getByRole('link', { name: 'People' }).filter({ visible: true })
+  if ((await people.count()) === 0) await page.getByRole('link', { name: 'More' }).filter({ visible: true }).first().click()
+  await people.first().click()
   await page.getByText('Jake Turner').filter({ visible: true }).first().waitFor()
 
   // A manager on another phone renames Jake and invites someone. Both show up by themselves.
@@ -260,7 +277,7 @@ async function openAsAdmin(browser, size, label) {
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
-  page.on('console', (m) => m.type() === 'error' && !m.text().includes('404') && errors.push(m.text()))
+  page.on('console', (m) => m.type() === 'error' && !/404|INTERNET_DISCONNECTED/.test(m.text()) && errors.push(m.text()))
   const live = await mockSupabase(page, state)
   await page.goto(`${base}/login`)
   await page.getByLabel('Email').fill(user.email)
@@ -328,6 +345,129 @@ async function runSetup(browser, size, label) {
   return { checks, errors }
 }
 
+async function runShift(browser, size, label) {
+  const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
+  addShiftData(state)
+  const checks = []
+  const inputValue = (name) => page.getByLabel(name, { exact: true }).filter({ visible: true }).first().inputValue()
+  const waitForValue = async (name, value) => {
+    for (let i = 0; i < 30 && (await inputValue(name)) !== value; i++) await page.waitForTimeout(100)
+    if ((await inputValue(name)) !== value) throw new Error(`${name} should show ${value}`)
+  }
+
+  // Jake, a driver, is the Lead on Truck 1.
+  state.me.user_id = 'u-d1'
+  state.me.profile = { full_name: 'Jake Turner', role: 'driver', active: true, phone: null, joined_at: '2026-10-03' }
+  await page.goto(`${base}/`)
+  await seen("You're on Truck 1").waitFor()
+  await seen('Out now').waitFor()
+  await shot('50-driver-home')
+
+  await page.getByRole('button', { name: 'Continue shift' }).click()
+  await seen('Lead: ').waitFor()
+  await page.getByLabel('Ice amount', { exact: true }).waitFor()
+  await shot('51-start-count')
+
+  // Jake finds 2 fewer bags of ice than the app thought. It saves by itself.
+  await page.getByLabel('Ice amount', { exact: true }).fill('6')
+  for (let i = 0; i < 30 && !state.calls.includes('save_shift_counts'); i++) await page.waitForTimeout(100)
+  if (!state.calls.includes('save_shift_counts')) throw new Error('Count was not saved')
+  await seen('Different').waitFor()
+  checks.push('counts save by themselves')
+
+  // Maria (crew) counts cherry syrup on her phone. It shows on Jake's without a reload.
+  await markPage(page)
+  state.tables.shift_counts.push({ shift_id: 'sh-1', supply_id: 's-cherry', kind: 'start', quantity: 128, expected: null, photo_path: null, entered_by: 'u-m1', client_ts: new Date(Date.now() + 1000).toISOString() })
+  live.signal('company:c1', 'shift_counts')
+  await waitForValue('Cherry syrup amount', '1')
+  await assertNoReload(page, 'crew count')
+  checks.push("crew counts show up live on the Lead's phone")
+
+  // No signal: the count waits on the phone, then sends when signal comes back.
+  state.offline = true
+  await context.setOffline(true)
+  const before = state.calls.length
+  await page.getByLabel('Small shaved ice cup amount', { exact: true }).fill('2')
+  await seen('waiting for signal').waitFor({ timeout: 5000 })
+  await shot('51b-no-signal')
+  state.offline = false
+  await context.setOffline(false)
+  await page.getByText('waiting for signal').first().waitFor({ state: 'detached', timeout: 20000 })
+  if (!state.calls.slice(before).includes('save_shift_counts')) throw new Error('Waiting count never sent')
+  if (Number(state.tables.shift_counts.find((c) => c.supply_id === 's-cup-s')?.quantity) !== 100) throw new Error('Waiting count sent the wrong amount')
+  checks.push('counts made with no signal send when it comes back')
+
+  await page.getByRole('button', { name: 'Confirm starting count' }).click()
+  await page.getByRole('button', { name: 'Tap again to confirm' }).click()
+  await seen('Amounts are filled in to bring the truck back up').waitFor()
+  checks.push('Lead confirms the start and moves on to loading')
+  await shot('52-load')
+
+  await page.getByRole('button', { name: 'Load these' }).click()
+  await seen('Loaded on this shift').waitFor()
+  await page.getByRole('button', { name: 'Generator fueled' }).click()
+  await page.getByRole('button', { name: 'Generator fueled', pressed: true }).waitFor()
+  checks.push('loading list fills from par levels and loads')
+  await shot('53-loaded')
+
+  await page.getByRole('navigation', { name: 'Shift steps' }).getByRole('button', { name: /Waste/ }).click()
+  await page.getByRole('button', { name: 'Log waste' }).click()
+  await page.getByLabel('Supply', { exact: true }).selectOption('s-cup-s')
+  await page.getByLabel('How much was wasted').fill('1')
+  await page.getByLabel('Why').selectOption({ label: 'Dropped' })
+  await page.locator('input[type=file]').setInputFiles({ name: 'drop.png', mimeType: 'image/png', buffer: Buffer.from(PNG, 'base64') })
+  await page.getByAltText('Waste photo').waitFor()
+  await shot('54-waste-sheet')
+  await page.getByRole('button', { name: 'Log waste' }).last().click()
+  await seen('Waste logged.').waitFor()
+  if (!state.lastWaste?.photo_path?.startsWith('c1/waste/') || !state.uploads?.length) throw new Error('Waste photo was not uploaded')
+  await seen('Small shaved ice cup: 1 sleeve').waitFor()
+  checks.push('waste with a photo is logged')
+  await shot('55-waste')
+
+  await page.getByRole('button', { name: 'Start the ending count' }).click()
+  await seen('To count').waitFor()
+  for (const input of await page.getByLabel(/ amount$/).filter({ visible: true }).all()) await input.fill('1')
+  await seen(/(\d+) of \1 counted/).waitFor()
+  await shot('56-end-count')
+  await page.getByRole('button', { name: 'Confirm ending count' }).click()
+  await page.getByRole('button', { name: 'Tap again to confirm' }).click()
+  await seen('Anything going back to the warehouse?').waitFor()
+  await shot('57-finish')
+  await page.getByRole('button', { name: 'Finish shift' }).click()
+  await page.getByRole('button', { name: 'Tap again to finish' }).click()
+  await seen("Here's what it used.").waitFor()
+  checks.push('a whole shift runs from start to finish')
+  await shot('58-results')
+
+  // Maria, a manager, looks at shifts, waste, par levels, and flags.
+  state.me.user_id = 'u-m1'
+  state.me.profile = { full_name: 'Maria Lopez', role: 'manager', active: true, phone: null, joined_at: '2026-10-02' }
+  await page.goto(`${base}/`)
+  await seen('Needs a look').waitFor()
+  await shot('59-manager-home')
+  await page.getByRole('button', { name: 'Looks fine' }).click()
+  await seen('Needs a look').waitFor({ state: 'detached' })
+  checks.push('managers clear flags')
+  await page.goto(`${base}/shifts`)
+  await seen('Past shifts').waitFor()
+  await seen('Ball game').waitFor()
+  await shot('60-shifts')
+  await page.goto(`${base}/shifts/sh-0?step=finish`)
+  await seen('Syrups (any flavor) (all together)').waitFor()
+  await shot('61-past-results')
+  await page.goto(`${base}/inventory/waste`)
+  await seen('Waste cost').waitFor()
+  await shot('62-waste-page')
+  await page.goto(`${base}/setup/pars`)
+  await page.getByLabel('Large shaved ice cup par level').waitFor()
+  await shot('63-pars')
+  checks.push('manager shift, waste, and par screens open')
+
+  await context.close()
+  return { checks, errors }
+}
+
 async function runInventory(browser, size, label) {
   const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
   state.tables.profiles = state.people
@@ -376,7 +516,7 @@ async function runInventory(browser, size, label) {
     ['phone', { width: 390, height: 844 }],
     ['desktop', { width: 1366, height: 860 }],
   ]) {
-    for (const flow of [run, runSetup, runInventory]) {
+    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift })[n]) : [run, runSetup, runInventory, runShift])) {
       const { checks, errors } = await flow(browser, size, label)
       console.log(`${label} ${flow.name}: ${checks.length} checks passed: ${checks.join('; ')}`)
       if (errors.length) {

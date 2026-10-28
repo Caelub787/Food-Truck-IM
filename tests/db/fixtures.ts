@@ -21,3 +21,17 @@ export const level = async (place: string, supply: string) =>
 
 export const call = (who: User, fn: string, p: Json) => as(who, (q) => q(`select public.${fn}($1) as r`, [JSON.stringify(p)]))
 
+
+export type Row = { id: string } & Json
+
+/** Adds a row as a person, through the normal security rules. */
+export async function insertAs<T extends Json = Row>(who: User, table: string, row: Json): Promise<T> {
+  const cols = Object.keys(row)
+  const [created] = await as(who, (q) =>
+    q<T>(
+      `insert into public.${table} (${cols.join(', ')}) values (${cols.map((_, i) => `$${i + 1}`).join(', ')}) returning *`,
+      Object.values(row),
+    ),
+  )
+  return created!
+}

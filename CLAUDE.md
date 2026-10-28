@@ -56,6 +56,10 @@ Everything must run on free plans until the owner says otherwise. Don't add paid
 
 Run lint, typecheck, unit tests, and database tests before every push.
 
+## Weak signal
+
+Drivers work with bad signal. Anything done on a shift (counts, loads, waste, returns, confirms, finishing) goes through `sendOrQueue` in `src/lib/offline.ts`. If there's no signal it waits on the phone and sends later, in order. So every one of those database functions must be safe to run twice: take a `client_id` (checked with `app.claim_request`) or a `client_ts` (latest wins).
+
 ## Company data separation (most important rule)
 
 1. Every table except `companies` has `company_id uuid not null`.
@@ -103,7 +107,9 @@ Run lint, typecheck, unit tests, and database tests before every push.
 ## Usage math
 
 * Actual usage = starting count + added during shift − ending count − waste.
+* Added during shift = every move onto or off the truck after the starting count is confirmed and up to the ending count (loads, early returns, and moves a manager makes). Waste and usage don't count as added.
 * Ending count is taken before returns. Returns happen after and move stock back to the warehouse.
+* Finishing a shift logs the usage, so the truck's stock lands on the ending count (less anything returned after it).
 * Expected usage = for every drink (paid and free), recipe amount for its product and size plus modifier effects, times quantity, using the recipe version in effect at the time of the sale.
 * Difference = actual − expected. Flag when over the percent limit AND over the minimum amount (per supply override, else company default), plus a whole shift dollar limit.
 * Supply groups: expected and actual are compared on the group total when a recipe uses a group.
@@ -151,8 +157,8 @@ Phases from `docs/PLAN.md`:
 1. Accounts: built and tested locally (sign up, App Owner approvals, roles, invites, login, password reset, people, business settings, audit log, email outbox). Not deployed yet: waiting on the owner to finish docs/SETUP.md.
 2. Setup: built and tested locally (settings and feature switches, lists, locations, trucks, suppliers, supplies with units and groups, products, sizes, add ons, versioned recipes, spreadsheet import, starter kits).
 3. Stock: built and tested locally (stock levels, one log of every move, deliveries, counts, moves between places, adjustments, expiration batches used oldest first, history with CSV export).
-4. Shifts: not started
-5. Waste: not started
+4. Shifts: built and tested locally (start or join a shift, Lead and crew, starting count filled in with what the app expects, loading list from par levels, loading checklist, ending count, returns, finish with saved results, start count mismatch flags, offline queue).
+5. Waste: built and tested locally (supplies or whole drinks with add ons, reasons, photos shrunk on the phone, warehouse waste for managers, waste page with CSV).
 6. Sales: not started
 7. Scheduling: not started
 8. Automation: not started

@@ -25,7 +25,11 @@ import { ProductEditorPage } from '@/features/setup/ProductEditorPage'
 import { ProductsPage } from '@/features/setup/ProductsPage'
 import { SetupHome } from '@/features/setup/SetupHome'
 import { SuppliersPage } from '@/features/setup/SuppliersPage'
+import { ParsPage } from '@/features/setup/ParsPage'
 import { SuppliesPage } from '@/features/setup/SuppliesPage'
+import { ShiftPage } from '@/features/shifts/ShiftPage'
+import { ShiftsPage } from '@/features/shifts/ShiftsPage'
+import { WastePage } from '@/features/waste/WastePage'
 import { TrucksPage } from '@/features/setup/TrucksPage'
 import { AppShell } from './AppShell'
 import { MorePage } from './MorePage'
@@ -50,6 +54,8 @@ export const router = createBrowserRouter([
               { index: true, element: <HomePage /> },
               { path: 'account', element: <AccountPage /> },
               { path: 'more', element: <MorePage /> },
+              { path: 'shifts', element: <ShiftsPage /> },
+              { path: 'shifts/:id', element: <ShiftPage /> },
               {
                 element: <RequireRole roles={['admin', 'manager']} />,
                 children: [
@@ -59,9 +65,11 @@ export const router = createBrowserRouter([
                   { path: 'inventory/count', element: <CountPage /> },
                   { path: 'inventory/move', element: <MovePage /> },
                   { path: 'inventory/history', element: <HistoryPage /> },
+                  { path: 'inventory/waste', element: <WastePage /> },
                   { path: 'setup', element: <SetupHome /> },
                   { path: 'setup/locations', element: <LocationsPage /> },
                   { path: 'setup/trucks', element: <TrucksPage /> },
+                  { path: 'setup/pars', element: <ParsPage /> },
                   { path: 'setup/suppliers', element: <SuppliersPage /> },
                   { path: 'setup/supplies', element: <SuppliesPage /> },
                   { path: 'setup/products', element: <ProductsPage /> },

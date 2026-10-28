@@ -6,6 +6,7 @@ import { useSettings } from '@/features/settings/useSettings'
 import { APP_NAME, ROLE_LABELS } from '@/lib/config'
 import { supabase } from '@/lib/supabase'
 import { navItems, tabItems } from './nav'
+import { QueueBanner } from './QueueBanner'
 import { UpdatePrompt } from './UpdatePrompt'
 
 /**
@@ -70,6 +71,7 @@ export function AppShell() {
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-28 md:px-8 md:pt-8 md:pb-12">
           <UpdatePrompt />
+          <QueueBanner />
           {me.company?.status === 'pending' && (
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <strong>Waiting for approval.</strong> You can look around and get set up. Inviting your team opens up once

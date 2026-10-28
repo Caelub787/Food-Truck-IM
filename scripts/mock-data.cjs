@@ -101,3 +101,127 @@ function setupTables() {
 }
 
 module.exports = { setupTables }
+
+// A shift going on Truck 1, one finished yesterday, par levels, and a flag.
+// The rpcs act like the database functions, simply.
+function addShiftData(state) {
+  const t = state.tables
+  const iso = (msAgo) => new Date(Date.now() - msAgo).toISOString()
+  const day = (msAgo) => iso(msAgo).slice(0, 10)
+  t.shifts = [
+    { id: 'sh-1', truck_id: 'tr-1', lead_id: 'u-d1', status: 'open', business_date: day(0), event_name: 'Farmers market', notes: null, started_at: iso(3600e3), start_confirmed_at: null, checklist_done_at: null, end_confirmed_at: null, ended_at: null, count_check_status: 'not_needed' },
+    { id: 'sh-0', truck_id: 'tr-2', lead_id: 'u-d1', status: 'closed', business_date: day(86400e3), event_name: 'Ball game', notes: null, started_at: iso(86400e3 + 8 * 3600e3), start_confirmed_at: iso(86400e3 + 7.9 * 3600e3), checklist_done_at: null, end_confirmed_at: iso(86400e3 + 1800e3), ended_at: iso(86400e3), count_check_status: 'not_needed' },
+  ]
+  t.shift_crew = [
+    { shift_id: 'sh-1', user_id: 'u-d1', role: 'lead' },
+    { shift_id: 'sh-1', user_id: 'u-m1', role: 'crew' },
+    { shift_id: 'sh-0', user_id: 'u-d1', role: 'lead' },
+  ]
+  t.shift_counts = []
+  t.shift_checklist = []
+  t.waste_logs = []
+  t.waste_lines = []
+  t.shift_results = [
+    { id: 'r-1', shift_id: 'sh-0', supply_id: 's-cup-s', group_id: null, start_qty: 200, added_qty: 100, end_qty: 120, waste_qty: 3, actual_qty: 177, expected_qty: null, diff_qty: null, unit_cost: 0.045, flagged: false, flag_reason: null },
+    { id: 'r-2', shift_id: 'sh-0', supply_id: 's-cherry', group_id: null, start_qty: 256, added_qty: 0, end_qty: 100, waste_qty: 0, actual_qty: 156, expected_qty: null, diff_qty: null, unit_cost: 0.117, flagged: false, flag_reason: null },
+    { id: 'r-3', shift_id: 'sh-0', supply_id: null, group_id: 'grp-syrup', start_qty: 256, added_qty: 0, end_qty: 100, waste_qty: 0, actual_qty: 156, expected_qty: null, diff_qty: null, unit_cost: 0.117, flagged: false, flag_reason: null },
+  ]
+  t.truck_pars = [
+    ['tr-1', 's-cup-s', 300], ['tr-1', 's-cup-l', 200], ['tr-1', 's-cherry', 384], ['tr-1', 's-blue', 256], ['tr-1', 's-ice', 100],
+    ['tr-2', 's-cup-s', 250],
+  ].map(([truck_id, supply_id, par_quantity]) => ({ truck_id, supply_id, par_quantity, low_quantity: null }))
+  t.flags = [
+    { id: 'f-1', kind: 'start_mismatch', severity: 'warning', title: "Starting count on Truck 2 didn't match", details: 'These were different from what the app had on the truck: Small shaved ice cup.', shift_id: 'sh-0', truck_id: 'tr-2', status: 'open', created_at: iso(30 * 3600e3) },
+  ]
+
+  const shift = (id) => t.shifts.find((s) => s.id === id)
+  const levelOf = (place, supply) => t.stock_levels.find((l) => l.place_id === place && l.supply_id === supply)
+  const addLevel = (place, supply, q) => {
+    const l = levelOf(place, supply)
+    if (l) l.quantity = Number(l.quantity) + q
+    else t.stock_levels.push({ place_id: place, supply_id: supply, quantity: q, updated_at: new Date().toISOString() })
+  }
+  const move = (kind, supply, quantity, from, to, shiftId) => {
+    t.stock_movements.unshift({ id: `mv-${Math.random()}`, supply_id: supply, quantity, kind, from_place_id: from, to_place_id: to, unit_cost: 0.05, shift_id: shiftId, reason: null, note: null, created_by: state.me.user_id, created_at: new Date().toISOString() })
+    if (from) addLevel(from, supply, -quantity)
+    if (to) addLevel(to, supply, quantity)
+  }
+  state.calls = []
+  const log = (name, fn) => (args) => {
+    state.calls.push(name)
+    return fn(args ?? {})
+  }
+  Object.assign(state.rpcs, {
+    open_shifts: () => t.shifts.filter((s) => s.status === 'open').map((s) => ({ shift_id: s.id, truck_id: s.truck_id, lead_id: s.lead_id, started_at: s.started_at, start_confirmed: Boolean(s.start_confirmed_at) })),
+    save_shift_counts: log('save_shift_counts', ({ p }) => {
+      for (const l of p.lines) {
+        t.shift_counts = t.shift_counts.filter((c) => !(c.shift_id === p.shift_id && c.supply_id === l.supply_id && c.kind === p.kind))
+        if (l.quantity !== null) t.shift_counts.push({ shift_id: p.shift_id, supply_id: l.supply_id, kind: p.kind, quantity: l.quantity, expected: null, photo_path: null, entered_by: state.me.user_id, client_ts: l.client_ts })
+      }
+      return null
+    }),
+    confirm_shift_start: log('confirm_shift_start', ({ p_shift_id }) => {
+      const s = shift(p_shift_id)
+      const ids = new Set([...t.stock_levels.filter((l) => l.place_id === s.truck_id && l.quantity).map((l) => l.supply_id), ...t.truck_pars.filter((p) => p.truck_id === s.truck_id).map((p) => p.supply_id)])
+      for (const id of ids) {
+        const expected = Number(levelOf(s.truck_id, id)?.quantity ?? 0)
+        const c = t.shift_counts.find((x) => x.shift_id === s.id && x.supply_id === id && x.kind === 'start')
+        if (c) {
+          c.expected = expected
+          addLevel(s.truck_id, id, c.quantity - expected)
+        } else t.shift_counts.push({ shift_id: s.id, supply_id: id, kind: 'start', quantity: expected, expected, photo_path: null, entered_by: null, client_ts: new Date().toISOString() })
+      }
+      s.start_confirmed_at = new Date().toISOString()
+      return null
+    }),
+    load_truck: log('load_truck', ({ p }) => {
+      const s = shift(p.shift_id)
+      for (const l of p.lines) move('load', l.supply_id, l.quantity, p.location_id, s.truck_id, s.id)
+      return p.lines.length
+    }),
+    return_from_truck: log('return_from_truck', ({ p }) => {
+      const s = shift(p.shift_id)
+      for (const l of p.lines) move('return', l.supply_id, l.quantity, s.truck_id, p.location_id, s.id)
+      return p.lines.length
+    }),
+    set_checklist_item: log('set_checklist_item', ({ p_shift_id, p_item_id, p_checked }) => {
+      t.shift_checklist = t.shift_checklist.filter((c) => !(c.shift_id === p_shift_id && c.item_id === p_item_id))
+      if (p_checked) t.shift_checklist.push({ shift_id: p_shift_id, item_id: p_item_id, checked_by: state.me.user_id })
+      return null
+    }),
+    finish_checklist: log('finish_checklist', ({ p_shift_id }) => {
+      shift(p_shift_id).checklist_done_at = new Date().toISOString()
+      return null
+    }),
+    log_waste: log('log_waste', ({ p }) => {
+      const place = p.shift_id ? shift(p.shift_id).truck_id : p.place_id
+      const id = `w-${t.waste_logs.length + 1}`
+      t.waste_logs.push({ id, place_id: place, shift_id: p.shift_id, supply_id: p.supply_id ?? null, product_size_id: p.product_size_id ?? null, modifier_ids: p.modifier_ids ?? [], quantity: p.quantity, reason_id: p.reason_id, note: p.note || null, photo_path: p.photo_path ?? null, cost: 0.5, created_by: state.me.user_id, created_at: new Date().toISOString() })
+      if (p.supply_id) move('waste', p.supply_id, p.quantity, place, null, p.shift_id)
+      state.lastWaste = p
+      return id
+    }),
+    confirm_shift_end: log('confirm_shift_end', ({ p_shift_id }) => {
+      shift(p_shift_id).end_confirmed_at = new Date().toISOString()
+      return null
+    }),
+    finish_shift: log('finish_shift', ({ p_shift_id }) => {
+      const s = shift(p_shift_id)
+      s.status = 'closed'
+      s.ended_at = new Date().toISOString()
+      for (const c of t.shift_counts.filter((x) => x.shift_id === s.id && x.kind === 'start')) {
+        const end = Number(t.shift_counts.find((x) => x.shift_id === s.id && x.supply_id === c.supply_id && x.kind === 'end')?.quantity ?? 0)
+        const added = t.stock_movements.filter((m) => m.shift_id === s.id && m.supply_id === c.supply_id && m.kind === 'load').reduce((a, m) => a + m.quantity, 0)
+        const waste = t.stock_movements.filter((m) => m.shift_id === s.id && m.supply_id === c.supply_id && m.kind === 'waste').reduce((a, m) => a + m.quantity, 0)
+        t.shift_results.push({ id: `r-${Math.random()}`, shift_id: s.id, supply_id: c.supply_id, group_id: null, start_qty: c.quantity, added_qty: added, end_qty: end, waste_qty: waste, actual_qty: c.quantity + added - end - waste, expected_qty: null, diff_qty: null, unit_cost: 0.05, flagged: false, flag_reason: null })
+      }
+      return null
+    }),
+    review_flag: log('review_flag', ({ p_flag_id }) => {
+      t.flags.find((f) => f.id === p_flag_id).status = 'reviewed'
+      return null
+    }),
+  })
+}
+
+module.exports.addShiftData = addShiftData

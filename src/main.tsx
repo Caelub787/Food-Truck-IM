@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router/dom'
 import { router } from '@/app/router'
 import { SetupNeeded } from '@/app/SetupNeeded'
 import { SessionProvider } from '@/features/auth/SessionProvider'
+import { startQueue } from '@/lib/offline'
 import { isConfigured } from '@/lib/supabase'
 import './index.css'
 
@@ -13,6 +14,7 @@ const queryClient = new QueryClient({
     queries: { retry: 1, refetchOnWindowFocus: true },
   },
 })
+if (isConfigured) startQueue(queryClient)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

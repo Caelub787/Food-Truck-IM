@@ -7,6 +7,7 @@ import {
   ClipboardList,
   CupSoda,
   FileSpreadsheet,
+  Gauge,
   ListChecks,
   Sparkles,
   Truck,
@@ -27,6 +28,7 @@ import { useSetupProgress } from './useSetupProgress'
 const sections: { to: string; label: string; text: string; icon: LucideIcon; adminOnly?: boolean }[] = [
   { to: '/setup/locations', label: 'Locations', text: 'Your warehouse and other places that hold stock', icon: Warehouse },
   { to: '/setup/trucks', label: 'Trucks', text: 'Each truck, its type, and where it loads from', icon: Truck },
+  { to: '/setup/pars', label: 'Par levels', text: 'How much each truck should leave with, so loading lists fill in', icon: Gauge },
   { to: '/setup/suppliers', label: 'Suppliers', text: 'Who you buy from and how they take orders', icon: Building2 },
   { to: '/setup/supplies', label: 'Supplies', text: 'Cups, syrup, milk, beans: units, costs, reorder levels', icon: Boxes },
   { to: '/setup/products', label: 'Products', text: 'What you sell, sizes, prices, and recipes', icon: CupSoda },
