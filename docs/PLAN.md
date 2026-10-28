@@ -14,7 +14,14 @@ Every business is different, so:
 * Every setting has a sensible default, so a new business works on day one.
 * Setup can start from a starter kit ("Shaved ice truck", "Coffee truck", or blank) that fills in common supplies, units, and reasons, all editable.
 
-## 2. Free hosting rule
+## 2. Two rules for every screen
+
+1. Live updates everywhere. When anyone changes anything (stock, counts, shifts, people, orders, settings), every other open screen shows it within a second or two. Nobody ever has to refresh. A small light shows "Live", or "Reconnecting" when the signal drops. While it's reconnecting, screens check for changes every 15 seconds, and once it reconnects they catch up on anything they missed.
+2. Full phone and desktop support. Every screen is built for both: phones get big buttons, a bottom tab bar, and one column. Computers and tablets get a side menu, wide tables, several columns, and hover effects. Every screen is checked at both sizes before it ships.
+
+How live updates work: every change in the database sends a tiny signal ("this table changed") to that business's private channel. The signal has no data in it, and only members of that business can listen. Open screens hear it and reload just that data through the normal security rules.
+
+## 3. Free hosting rule
 
 Everything has to be free right now, with a paid upgrade available later. No paid services get added without the owner saying so.
 
@@ -25,7 +32,7 @@ Everything has to be free right now, with a paid upgrade available later. No pai
 | Database | Supabase (PostgreSQL) | A normal Postgres database. Row level security keeps companies apart | Supabase Pro, $25 a month |
 | Logins | Supabase Auth | Proven login system. Passwords stored as bcrypt hashes, never the real password. Invite and reset links built in | Included |
 | Photos | Supabase Storage | Same place as the data, same company lock | Included in Pro |
-| Live updates | Supabase Realtime | Lead and crew phones see each other's entries | Included in Pro |
+| Live updates | Supabase Realtime | Every screen updates by itself when anyone changes something | Included in Pro |
 | Scheduled jobs | Supabase Cron (`pg_cron`) | Runs inside the database on a timer, no extra service | Included |
 | Server code | Supabase Edge Functions | Sending email and push, CSV parsing, and later Square | Included |
 | Email | A Gmail account made for the app | Free, about 500 emails a day, works without owning a domain | Resend or Brevo once there's a domain |
@@ -40,8 +47,9 @@ Free plan limits to know about:
 3. Photo storage is small, so photos get shrunk on the phone (about 100 KB each) and old photos can be cleared automatically after a set time (business setting, default 6 months).
 4. No automatic backups on the free plan. The plan includes a free weekly backup using GitHub Actions and an "export all my data" button for each business.
 5. Gmail allows about 500 emails a day. Fine for now.
+6. Live updates on the free plan allow about 200 people connected at the same time. Plenty for a few businesses.
 
-## 3. Keeping companies separate and passwords safe
+## 4. Keeping companies separate and passwords safe
 
 The phone talks to the database through Supabase, so the database itself is the lock:
 1. Every table has a `company_id`, and links between tables include the company, so a row can never point at another company's row.
@@ -57,7 +65,7 @@ Passwords and logins:
 * Logins are rate limited. Emails must be confirmed.
 * Invite and reset links are single use and expire. Invite links last up to 24 hours (Supabase's limit), and admins can resend them with one tap.
 
-## 4. Roles
+## 5. Roles
 
 App Owner (you): a separate section of the app, only for the owner email (kept in a private setting, not in the code). Sees sign up requests and approves or declines them, sees every company's name, admin, size, status, and database use, and can suspend or reactivate a company. The App Owner does not see any company's inventory, sales, or people. That keeps each business's data private.
 
@@ -79,7 +87,7 @@ Inside a company:
 
 On a shift, one person is the Lead and anyone else is Crew. Everyone on the shift can enter counts, waste, and sales. Only the Lead confirms the inventory at the start and end and finishes the shift.
 
-## 5. New company sign up
+## 6. New company sign up
 
 1. Anyone can sign up: business name, their name, email, phone, number of trucks, and password. They confirm their email.
 2. The company starts as Pending. The App Owner gets an email and sees it in the owner section.
@@ -87,7 +95,7 @@ On a shift, one person is the Lead and anyone else is Crew. Everyone on the shif
 4. The App Owner approves or declines (with an optional reason). The admin gets an email either way.
 5. Approved companies get the full app. Declined or suspended companies can't get in.
 
-## 6. How the data works
+## 7. How the data works
 
 ### 6.1 Units
 
@@ -228,7 +236,7 @@ A manager can fix a count on a closed shift with a reason. The app saves who, wh
 
 Turning something off hides it from drivers and new lists but keeps its history in reports. Deleting is only allowed for things that were never used.
 
-## 7. Screens
+## 8. Screens
 
 Driver (phone first, big buttons, works one handed):
 * Home: Start or Continue Shift, My Schedule (if on), reminders
@@ -261,7 +269,7 @@ App Owner:
 * Companies: status, size, last active, suspend or reactivate
 * Database and storage use
 
-## 8. Automation
+## 9. Automation
 
 Happens instantly when something is saved:
 * Stock updates on every load, return, waste, delivery, and count
@@ -292,7 +300,7 @@ Scheduled (each runs per company in that company's time zone, times are business
 
 How it runs: `pg_cron` runs small database jobs every few minutes. They write messages into an outbox table. An Edge Function sends what's in the outbox by email and push. Every job records that it ran for that company and period, so a retry never sends anything twice.
 
-## 9. Square later
+## 10. Square later
 
 Built now:
 * The `sales` table with `source`, the source's sale ID, and the unique rule against double counting
@@ -302,7 +310,7 @@ Built now:
 
 Added later, when the owner says so: per truck "Connect Square" (OAuth), a `square_connections` table with tokens encrypted, a nightly sync through the same ingest function with `source = square`, and matching Square catalog items to products. Full notes in CLAUDE.md.
 
-## 10. Code layout
+## 11. Code layout
 
 ```
 src/                     the phone app (React + TypeScript)
@@ -320,7 +328,7 @@ docs/
 CLAUDE.md
 ```
 
-## 11. Build phases
+## 12. Build phases
 
 Each phase ends with tested code pushed to the branch and a short note on how to try it.
 
@@ -336,14 +344,14 @@ Each phase ends with tested code pushed to the branch and a short note on how to
 9. Extras: loading checklist, driver comparison, photos on end counts, profit view, corrections with history, report polish and CSV export.
 10. Square connection (when the owner says so).
 
-## 12. Testing
+## 13. Testing
 
 * Unit tests: usage math, recipe and modifier math, unit conversions, CSV parsing, par and reorder math
 * Database tests on real Postgres: every table's security rules with two companies and all roles
 * Phone sized browser tests for sign up, invite, and a full shift
 * Every job: "runs twice, sends once"
 
-## 13. Decisions made (owner can change any of these)
+## 14. Decisions made (owner can change any of these)
 
 1. Kona Ice and Toms Coffee: one company, two truck types.
 2. Anyone can sign up, the App Owner approves. Pending companies can set up but can't invite or email.
@@ -360,7 +368,7 @@ Each phase ends with tested code pushed to the branch and a short note on how to
 13. Free hosting only: Cloudflare Pages and Supabase. Gmail for email until there's a domain.
 14. Any location can hold stock. Each truck has a home location it loads from.
 
-## 14. What the owner needs to do (when we get there)
+## 15. What the owner needs to do (when we get there)
 
 1. Make a free Supabase account and project (needed to try the app live after phase 1).
 2. Make a free Cloudflare account and connect this GitHub repo to Cloudflare Pages.

@@ -32,7 +32,7 @@ export function SettingsPage() {
   return (
     <div>
       <PageHeader title="Business" subtitle={`Status: ${STATUS_LABELS[company.status]}`} />
-      <Card>
+      <Card className="max-w-2xl">
         <form onSubmit={submit} className="flex flex-col gap-4">
           {save.error && <Notice tone="error">{save.error}</Notice>}
           {saved && <Notice tone="success">Saved.</Notice>}

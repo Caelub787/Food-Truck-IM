@@ -9,17 +9,21 @@ import { useAction } from '@/lib/useAction'
 export function AccountPage() {
   const me = useMeLoaded()
   return (
-    <div className="space-y-4">
+    <div>
       <PageHeader
         title="My account"
         subtitle={me.profile ? `${ROLE_LABELS[me.profile.role]} at ${me.company?.name}` : me.email}
       />
-      {me.profile && <ProfileForm />}
-      <PasswordForm />
-      <Button variant="secondary" full onClick={() => supabase.auth.signOut()}>
-        Log out
-      </Button>
-      <p className="text-center text-xs text-slate-400">Logged in as {me.email}</p>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        {me.profile && <ProfileForm />}
+        <PasswordForm />
+      </div>
+      <div className="mt-6 flex flex-col items-center gap-2 md:items-start">
+        <Button variant="secondary" className="w-full md:w-auto" onClick={() => supabase.auth.signOut()}>
+          Log out
+        </Button>
+        <p className="text-xs text-slate-400">Logged in as {me.email}</p>
+      </div>
     </div>
   )
 }

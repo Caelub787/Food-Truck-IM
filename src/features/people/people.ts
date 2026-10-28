@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import type { Me } from '@/features/auth/session'
 import type { Role } from '@/lib/config'
+import { useLiveQuery } from '@/lib/live'
 import { supabase } from '@/lib/supabase'
 
 export type Person = {
@@ -15,7 +15,8 @@ export type Person = {
 }
 
 export function usePeople() {
-  return useQuery({
+  return useLiveQuery({
+    tables: ['profiles'],
     queryKey: ['people'],
     queryFn: async () => {
       const { data, error } = await supabase

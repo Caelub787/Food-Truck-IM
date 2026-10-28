@@ -18,6 +18,16 @@ Build it for any business:
 * Optional features are per business toggles with sensible defaults (scheduling, manager count checks, expiration tracking, loading checklist, who reports sales).
 * Never hard code anything specific to Kona Ice or Toms Coffee. Starter kits can suggest common items, but everything is editable.
 
+## Two rules for every screen
+
+1. Live updates everywhere. Nobody should ever have to refresh to see a change someone else made (stock, counts, shifts, people, anything).
+   * Every company table calls `select app.enable_live('public.<table>')` in its migration (add `p_owner => true` if the App Owner screen shows it). That sends a tiny "this table changed" signal to the private channel `company:<id>`. No row data goes in the signal.
+   * Every query that shows data uses `useLiveQuery` from `src/lib/live.ts` and lists every table it reads in `tables`. Never use plain `useQuery` for data on screen.
+   * Panels that edit a record read it from the live list, so they show changes others make while open.
+   * `LiveUpdates` (mounted for every logged in screen) listens and reloads the matching queries. If the connection drops, queries check every 15 seconds, and everything reloads once on reconnect.
+   * Database tests check that changes signal the right channel and that only members can listen. The screen script checks that changes appear without a reload.
+2. Full phone and desktop support. Design every screen for both. Phones: one column, big buttons (at least 48px tall), bottom tab bar, panels slide up from the bottom. Desktop (the `md` size and up): side menu, wide tables instead of card lists where it helps, several columns, hover effects, centered dialogs. Check screenshots at 390px and 1366px wide before pushing.
+
 ## Free only
 
 Everything must run on free plans until the owner says otherwise. Don't add paid services or anything that needs a credit card.
@@ -30,7 +40,8 @@ Everything must run on free plans until the owner says otherwise. Don't add paid
 
 ## Tech stack
 
-* Front end: React + TypeScript + Vite, React Router, TanStack Query, Tailwind CSS, `vite-plugin-pwa`, `@supabase/supabase-js`.
+* Front end: React + TypeScript + Vite, React Router, TanStack Query (through `useLiveQuery`), Tailwind CSS, `vite-plugin-pwa`, `@supabase/supabase-js`.
+* Live updates: Supabase Realtime, private broadcast channels (see "Two rules for every screen").
 * Database: Postgres via Supabase. All schema, security rules, and functions live in `supabase/migrations/*.sql`.
 * Server code: Supabase Edge Functions (Deno, TypeScript) in `supabase/functions/`.
 * Tests: Vitest. Database tests run against a real local Postgres with a small Supabase shim (`tests/db/`).
@@ -61,14 +72,14 @@ Run lint, typecheck, unit tests, and database tests before every push.
 ## Writing migrations
 
 * New migration files go in `supabase/migrations/` named `YYYYMMDDHHMMSS_what_it_does.sql`. Never edit a migration that has been deployed. Until the first deploy (see Build status), editing is fine.
-* For every new table: `enable row level security`, policies, `revoke all ... from anon, authenticated`, then grant only what's needed to `authenticated`, and `grant all ... to service_role`.
+* For every new table: `enable row level security`, policies, `revoke all ... from anon, authenticated`, then grant only what's needed to `authenticated`, `grant all ... to service_role`, and `select app.enable_live(...)` for live updates.
 * For every new function: `revoke execute ... from public, anon, authenticated` naming the function, then grant to the roles that need it. Don't use `revoke ... on all functions` after the first migration, it would undo earlier grants.
 * Error messages raised in functions are shown to users as is, so write them in plain words.
 * Add tests in `tests/db/` and run `npm run test:db`.
 
 ## Checking screens
 
-`scripts/phone-screens.cjs` clicks through the built app on a phone sized screen with a fake Supabase and saves screenshots (how to run it is at the top of the file). Use it after UI changes and look at the screenshots. Add new screens to it as they're built.
+`scripts/phone-screens.cjs` clicks through the built app at phone and desktop sizes with a fake Supabase (including a fake live connection) and saves screenshots (how to run it is at the top of the file). It also checks that changes from "someone else" appear without a reload, and that the app reconnects by itself. Run it after UI changes and look at the screenshots. Add new screens and live checks to it as they're built. Use `.filter({ visible: true })` in its text checks, since phone and desktop versions of a screen can both be on the page.
 
 ## Roles
 

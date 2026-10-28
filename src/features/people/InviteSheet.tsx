@@ -42,7 +42,7 @@ export function InviteSheet({ open, onClose, onDone }: { open: boolean; onClose:
       <form onSubmit={submit} className="flex flex-col gap-4">
         <p className="text-slate-600">They'll get an email with a link to set their own password.</p>
         {invite.error && <Notice tone="error">{invite.error}</Notice>}
-        <Field label="Name" required value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+        <Field label="Name" required autoFocus value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
         <Field
           label="Email"
           type="email"

@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router'
+import { LiveUpdates } from '@/features/live/LiveUpdates'
 import { Spinner } from '@/components/ui'
 import { BlockedPage } from './BlockedPage'
 import { useMe, useSession } from './session'
@@ -12,7 +13,12 @@ export function RequireSession() {
     const next = location.pathname + location.search
     return <Navigate to={`/login${next === '/' ? '' : `?next=${encodeURIComponent(next)}`}`} replace />
   }
-  return <Outlet />
+  return (
+    <>
+      <LiveUpdates />
+      <Outlet />
+    </>
+  )
 }
 
 /** Only lets in people who belong to a business that is pending or active (or the App Owner). */

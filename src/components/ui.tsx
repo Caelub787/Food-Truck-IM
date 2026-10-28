@@ -17,12 +17,12 @@ export function Button({ variant = 'primary', busy, full, className, children, d
       {...rest}
       disabled={disabled || busy}
       className={cx(
-        'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold transition',
+        'inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold transition disabled:cursor-not-allowed',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 disabled:opacity-60',
-        variant === 'primary' && 'bg-brand-700 text-white active:bg-brand-800',
-        variant === 'secondary' && 'border border-slate-300 bg-white text-slate-900 active:bg-slate-100',
-        variant === 'danger' && 'bg-red-600 text-white active:bg-red-700',
-        variant === 'ghost' && 'text-brand-700 active:bg-brand-50',
+        variant === 'primary' && 'bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-800',
+        variant === 'secondary' && 'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:bg-slate-100',
+        variant === 'danger' && 'bg-red-600 text-white hover:bg-red-700 active:bg-red-700',
+        variant === 'ghost' && 'text-brand-700 hover:bg-brand-50 active:bg-brand-50',
         full && 'w-full',
         className,
       )}
@@ -163,7 +163,7 @@ export function Sheet({ title, open, onClose, children }: { title: string; open:
       <div className="relative max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:max-w-md sm:rounded-3xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">{title}</h2>
-          <button onClick={onClose} className="rounded-full p-2 text-slate-500 active:bg-slate-100" aria-label="Close">
+          <button onClick={onClose} className="rounded-full p-2 text-slate-500 hover:bg-slate-100 active:bg-slate-100" aria-label="Close">
             <X className="size-5" />
           </button>
         </div>

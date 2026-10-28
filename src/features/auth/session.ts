@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
-import { useQuery } from '@tanstack/react-query'
 import { createContext, useContext } from 'react'
 import type { CompanyStatus, Role } from '@/lib/config'
+import { useLiveQuery } from '@/lib/live'
 import { rpc } from '@/lib/supabase'
 
 export type Me = {
@@ -29,11 +29,11 @@ export function useSession() {
 /** Who is logged in, their role, and their business. */
 export function useMe() {
   const { session } = useSession()
-  return useQuery({
+  return useLiveQuery({
+    tables: ['profiles', 'companies'],
     queryKey: ['me', session?.user.id],
     queryFn: () => rpc<Me>('my_context'),
     enabled: Boolean(session),
-    staleTime: 60_000,
   })
 }
 

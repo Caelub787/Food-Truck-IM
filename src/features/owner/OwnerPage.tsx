@@ -1,7 +1,8 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Badge, Button, Card, Notice, PageHeader, Sheet, Spinner } from '@/components/ui'
 import type { CompanyStatus } from '@/lib/config'
+import { useLiveQuery } from '@/lib/live'
 import { rpc } from '@/lib/supabase'
 import { useAction } from '@/lib/useAction'
 
@@ -39,15 +40,27 @@ function formatDate(value: string | null) {
 
 export function OwnerPage() {
   const [tab, setTab] = useState<'waiting' | 'all'>('waiting')
-  const companies = useQuery({ queryKey: ['owner', 'companies'], queryFn: () => rpc<OwnerCompany[]>('owner_list_companies') })
-  const stats = useQuery({ queryKey: ['owner', 'stats'], queryFn: () => rpc<OwnerStats>('owner_stats') })
+  const companies = useLiveQuery({
+    tables: ['companies', 'profiles'],
+    queryKey: ['owner', 'companies'],
+    queryFn: () => rpc<OwnerCompany[]>('owner_list_companies'),
+  })
+  const stats = useLiveQuery({
+    tables: ['companies', 'profiles'],
+    queryKey: ['owner', 'stats'],
+    queryFn: () => rpc<OwnerStats>('owner_stats'),
+  })
   const waiting = (companies.data ?? []).filter((c) => c.status === 'pending')
   const list = tab === 'waiting' ? waiting : (companies.data ?? [])
 
   return (
     <div>
       <PageHeader title="App owner" subtitle="Approve new businesses and keep an eye on the app." />
-      {stats.data && <StatsCard stats={stats.data} />}
+      {stats.data && (
+        <div className="lg:max-w-2xl">
+          <StatsCard stats={stats.data} />
+        </div>
+      )}
 
       <div className="mt-6 mb-3 flex gap-2" role="tablist">
         {(
@@ -73,7 +86,7 @@ export function OwnerPage() {
       {!companies.isLoading && list.length === 0 && (
         <Card className="text-center text-slate-500">{tab === 'waiting' ? 'No sign ups are waiting.' : 'No businesses yet.'}</Card>
       )}
-      <div className="space-y-3">
+      <div className="grid items-start gap-3 lg:grid-cols-2">
         {list.map((company) => (
           <CompanyCard key={company.id} company={company} />
         ))}

@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2, Circle, Smartphone } from 'lucide-react'
 import { Link, Navigate } from 'react-router'
 import { Button, Card } from '@/components/ui'
 import { useMeLoaded, type Me } from '@/features/auth/session'
+import { useLiveQuery } from '@/lib/live'
 import { supabase } from '@/lib/supabase'
 import { useInstallPrompt } from './useInstallPrompt'
 
@@ -12,10 +12,12 @@ export function HomePage() {
   const firstName = me.profile.full_name.split(' ')[0]
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">Hi, {firstName}</h1>
-      <InstallCard />
-      {me.profile.role === 'driver' ? <DriverHome /> : <GettingStarted me={me} />}
+    <div>
+      <h1 className="mb-4 text-2xl font-bold tracking-tight">Hi, {firstName}</h1>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        {me.profile.role === 'driver' ? <DriverHome /> : <GettingStarted me={me} />}
+        <InstallCard />
+      </div>
     </div>
   )
 }
@@ -32,7 +34,8 @@ function DriverHome() {
 }
 
 function GettingStarted({ me }: { me: Me }) {
-  const people = useQuery({
+  const people = useLiveQuery({
+    tables: ['profiles'],
     queryKey: ['people-count', me.company?.id],
     queryFn: async () => {
       const { count, error } = await supabase.from('profiles').select('user_id', { count: 'exact', head: true })

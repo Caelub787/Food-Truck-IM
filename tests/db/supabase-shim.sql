@@ -53,6 +53,31 @@ create function auth.role() returns text language sql stable as $$
   )::text
 $$;
 
+-- Realtime: realtime.send() stores the message, and realtime.topic() returns the
+-- channel being joined (tests set it with set_config('realtime.topic', ...)).
+create schema realtime;
+create table realtime.messages (
+  id bigserial primary key,
+  topic text not null,
+  extension text not null,
+  payload jsonb,
+  event text,
+  private boolean default false,
+  inserted_at timestamptz not null default now()
+);
+alter table realtime.messages enable row level security;
+create function realtime.topic() returns text language sql stable as $$
+  select nullif(current_setting('realtime.topic', true), '')
+$$;
+create function realtime.send(payload jsonb, event text, topic text, private boolean default true)
+returns void language sql as $$
+  insert into realtime.messages (topic, extension, payload, event, private)
+  values (topic, 'broadcast', payload, event, private)
+$$;
+grant usage on schema realtime to anon, authenticated, service_role;
+grant select on realtime.messages to authenticated;
+grant execute on function realtime.topic() to anon, authenticated, service_role;
+
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on all functions in schema auth to anon, authenticated, service_role;
 grant usage on schema extensions to anon, authenticated, service_role;
