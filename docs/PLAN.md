@@ -1,334 +1,370 @@
-# Food Truck Inventory App: Build Plan
+# Truck Inventory App: Build Plan
 
-Status: draft. Waiting on answers to the open questions at the bottom. Nothing in here is final until those are answered.
+Status: approved direction, building. Version 2 (updated with the owner's answers and the free hosting rule).
 
-## 1. The idea in a few lines
+## 1. The idea
 
-A phone friendly web app for food truck companies (starting with Kona Ice and Toms Coffee trucks). Drivers only type what the app can't know on its own: what is physically in the truck, what got loaded, what got wasted, and (optionally) how many drinks they sold. Everything else runs by itself on a schedule: reports, low stock alerts, order lists, par level suggestions, reminders, expiration alerts, and flags for anything that looks off.
+A phone friendly web app that any food truck business can sign up for. It's built with business owners in mind: easy to set up, easy for drivers, and it runs itself as much as possible.
 
-Sales come into one table that doesn't care where they came from. Today that's a Square CSV upload or driver drink counts. Later it will be a direct Square connection per truck, added without redoing anything.
+People only type what the app can't know: what is physically on a truck, what got loaded or wasted, and (if the business wants) sales counts. Everything else happens on its own: reports, low stock alerts, order lists, par level suggestions, reminders, expiration alerts, and flags for anything that looks off.
 
-## 2. Tech picks and why
+Every business is different, so:
+* Every list is named by the business (truck types, units, categories, waste reasons, free drink reasons, checklists).
+* Optional features can be turned on or off per business (scheduling, manager count checks, expiration tracking, loading checklist, who reports sales).
+* Every setting has a sensible default, so a new business works on day one.
+* Setup can start from a starter kit ("Shaved ice truck", "Coffee truck", or blank) that fills in common supplies, units, and reasons, all editable.
 
-| Piece | Pick | Why |
-|---|---|---|
-| App | Next.js with TypeScript | One project for both the phone screens and the server. Very common, lots of help available, easy to host. |
-| Phone app | PWA (installable web app) | Drivers open a link and tap "Add to Home Screen". No app store, works on iPhone and Android, one version to keep up. |
-| Database | PostgreSQL | Normal, proven database. Great at reports. Has a built in lock (row level security) that helps keep each company's data separate. |
-| Database code | Drizzle ORM | Typed queries and simple migration files. Stays close to plain SQL so nothing is hidden. |
-| Logins | Better Auth (open source library) | Proven login code instead of writing our own: password hashing, sessions, email verification, password resets, rate limits on login. |
-| Scheduled jobs | `pg-boss` job runner | Keeps its schedule and job queue inside the same Postgres database, so there's no extra service to run. Retries failed jobs. |
-| Email | Resend, with React Email templates | Simple to send, good delivery, free tier covers early use. |
-| Photos | S3 style storage (Cloudflare R2) | Cheap file storage. Photos get shrunk on the phone before upload so they're fast on cell data. |
-| Phone notifications | Web Push | Free reminders straight to the driver's phone once the app is on their home screen. Email as a backup. |
-| Look and feel | Tailwind CSS | Mobile first styling, big tap targets, number pads for counts. |
-| Hosting | Railway (or Render) | One dashboard for the web app, the job worker, and the database. Roughly $20 to $40 a month to start. |
-| Tests | Vitest and Playwright | Tests for the math and the data separation, plus phone sized browser tests for the driver flow. |
+## 2. Free hosting rule
+
+Everything has to be free right now, with a paid upgrade available later. No paid services get added without the owner saying so.
+
+| Piece | Pick (free) | Why | Upgrade later |
+|---|---|---|---|
+| Phone app | React + TypeScript, built with Vite, as an installable PWA | One link, "Add to Home Screen", works on iPhone and Android, works offline | Nothing needed |
+| App hosting | Cloudflare Pages | Free with no traffic limit for the app files, business use allowed, deploys itself from GitHub | Stays free |
+| Database | Supabase (PostgreSQL) | A normal Postgres database. Row level security keeps companies apart | Supabase Pro, $25 a month |
+| Logins | Supabase Auth | Proven login system. Passwords stored as bcrypt hashes, never the real password. Invite and reset links built in | Included |
+| Photos | Supabase Storage | Same place as the data, same company lock | Included in Pro |
+| Live updates | Supabase Realtime | Lead and crew phones see each other's entries | Included in Pro |
+| Scheduled jobs | Supabase Cron (`pg_cron`) | Runs inside the database on a timer, no extra service | Included |
+| Server code | Supabase Edge Functions | Sending email and push, CSV parsing, and later Square | Included |
+| Email | A Gmail account made for the app | Free, about 500 emails a day, works without owning a domain | Resend or Brevo once there's a domain |
+| Phone notifications | Web Push | Free. iPhones need the app added to the home screen first (iOS 16.4 or newer) | Stays free |
+| Tests and checks | GitHub Actions | Runs the tests on every push | Stays free at this size |
+
+Railway was the first pick, but its free plan now only includes $1 of usage a month, which can't keep an app and a database running.
+
+Free plan limits to know about:
+1. Supabase pauses a free project after 7 days with no use. Data is kept and it comes back with one click. Daily use keeps it awake.
+2. 500 MB of database space. That's plenty for testing and a few trucks for a long time. The App Owner page shows how full it is.
+3. Photo storage is small, so photos get shrunk on the phone (about 100 KB each) and old photos can be cleared automatically after a set time (business setting, default 6 months).
+4. No automatic backups on the free plan. The plan includes a free weekly backup using GitHub Actions and an "export all my data" button for each business.
+5. Gmail allows about 500 emails a day. Fine for now.
 
 ## 3. Keeping companies separate and passwords safe
 
-Company separation (three layers, so one mistake can't leak data):
+The phone talks to the database through Supabase, so the database itself is the lock:
 1. Every table has a `company_id`, and links between tables include the company, so a row can never point at another company's row.
-2. All database access goes through one helper that is tied to the logged in user's company. Code can't "forget" to filter.
-3. Postgres row level security is turned on for every company table. Even if a query forgot the filter, the database itself refuses to return another company's rows.
-
-On top of that:
-* Record IDs are random (UUIDs), not 1, 2, 3, so nobody can guess them.
-* Photos are stored under a company folder and only served through short lived signed links.
-* Automated tests create two companies and try to read, edit, and export each other's data. Those tests must pass before anything ships.
+2. Row level security is on for every table. Each rule checks the logged in user's company (and role) before any row is returned or changed.
+3. Anything that changes stock, closes a shift, or touches more than one table runs as one database function that checks the company and role first and does all its steps together or not at all.
+4. The powerful server key never goes to the phone. Only Edge Functions use it, and they check who's asking first.
+5. Record IDs are random (UUIDs), so nobody can guess them.
+6. Photos live in a folder per company with the same lock, and are only shown through short lived links.
+7. Automated tests create two companies and try to read, change, and delete each other's data for every table. They have to pass on every push.
 
 Passwords and logins:
-* Passwords are run through a slow one way hash (scrypt or Argon2). The real password is never stored.
-* Login cookies are secure and can't be read by page scripts.
-* Login attempts are rate limited.
-* Invite and reset links are long random tokens, stored hashed, single use, and expire (invites after 7 days, resets after 1 hour).
+* Supabase Auth stores passwords as bcrypt hashes.
+* Logins are rate limited. Emails must be confirmed.
+* Invite and reset links are single use and expire. Invite links last up to 24 hours (Supabase's limit), and admins can resend them with one tap.
 
 ## 4. Roles
 
-Proposed (see question 11):
+App Owner (you): a separate section of the app, only for the owner email (kept in a private setting, not in the code). Sees sign up requests and approves or declines them, sees every company's name, admin, size, status, and database use, and can suspend or reactivate a company. The App Owner does not see any company's inventory, sales, or people. That keeps each business's data private.
+
+Inside a company:
 
 | Can do | Admin | Manager | Driver |
 |---|---|---|---|
-| Company settings, locations | Yes | View only | No |
-| Invite, edit, turn off admins | Yes | No | No |
-| Invite, edit, turn off managers | Yes | Waiting on question 11 | No |
+| Company settings, features, locations | Yes | View only | No |
+| Invite, edit, turn off admins and managers | Yes | No | No |
 | Invite, edit, turn off drivers | Yes | Yes | No |
 | Trucks, suppliers, supplies, products, recipes | Yes | Yes | No |
 | Warehouse stock, deliveries, counts, transfers | Yes | Yes | No |
 | Approve and send supplier orders | Yes | Yes | No |
-| Reports, flags, all shifts | Yes | Yes | Own shifts only |
-| Correct a closed shift's counts | Yes | Yes | No |
-| Start and end shifts, counts, load and return, waste, drink counts | Yes | Yes | Yes (their truck, their shift) |
+| Manager count checks | Yes | Yes | No |
+| Schedules (if turned on) | Yes | Yes | See their own |
+| Reports, flags, all shifts | Yes | Yes | Only shifts they worked |
+| Correct a closed shift | Yes | Yes | No |
+| Shift work: counts, loading, returns, waste, sales (if allowed) | Yes | Yes | Yes, on shifts they're on |
 
-## 5. How the data works
+On a shift, one person is the Lead and anyone else is Crew. Everyone on the shift can enter counts, waste, and sales. Only the Lead confirms the inventory at the start and end and finishes the shift.
 
-### 5.1 Units
+## 5. New company sign up
 
-Every supply has one base unit that everything is stored in (oz, grams, each). You can add other units and how many base units they hold:
+1. Anyone can sign up: business name, their name, email, phone, number of trucks, and password. They confirm their email.
+2. The company starts as Pending. The App Owner gets an email and sees it in the owner section.
+3. While pending, the admin can start setting up (locations, trucks, supplies, products) but can't invite anyone or send emails.
+4. The App Owner approves or declines (with an optional reason). The admin gets an email either way.
+5. Approved companies get the full app. Declined or suspended companies can't get in.
 
-* Whole milk: base unit oz. Half gallon = 64 oz. Case = 6 half gallons.
-* Espresso beans: base unit grams. Bag = 2,268 g (5 lb). Shot = 9 g.
-* Large cups: base unit each. Sleeve = 50. Case = 1,000.
+## 6. How the data works
 
-Each supply picks a count unit (what drivers count in, like half gallons or sleeves), a purchase unit (what the supplier sells, like cases), and recipes can use any of its units (like shots). Drivers never do math, the app converts. Counts can be partial (quick buttons for ¼, ½, ¾) unless the supply is set to whole numbers only.
+### 6.1 Units
 
-### 5.2 Supplies and suppliers
+Every supply has one base unit everything is stored in (oz, grams, each), plus other units the business defines:
+* Whole milk: base oz. Half gallon = 64 oz. Case = 6 half gallons.
+* Espresso beans: base grams. Bag = 2,268 g. Shot = 9 g.
+* Large cups: base each. Sleeve = 50. Case = 1,000.
 
-Supply: name, category, units (above), supplier, cost per unit, reorder level, "order up to" level, whether it tracks expiration (and usual shelf life), active or turned off.
+Each supply picks a count unit (what drivers count in), a purchase unit (what the supplier sells), and recipes can use any of its units. Counts can be partial (quick buttons for ¼, ½, ¾) unless the supply is set to whole numbers only.
 
-Supplier: name, email, phone, order notes (like "orders by Tuesday for Thursday delivery").
+### 6.2 Supplies, suppliers, truck types
 
-### 5.3 Products, sizes, modifiers, and recipes
+* Supply: name, category, units, supplier, cost per unit, reorder level, "order up to" level, case size, tracks expiration (and usual shelf life), which truck types carry it, on or off.
+* Supplier: name, contact, how they take orders (email, or "we order ourselves" which just keeps the list), order days, minimum order, notes.
+* Truck types: named by the business (like "Shaved Ice" and "Coffee"). Supplies and products can be limited to certain types, so each driver only sees what their truck uses. If a business has one type, this stays hidden.
 
-* Product: Latte. Sizes: Small, Medium, Large (or just one size).
+### 6.3 Products, sizes, modifiers, recipes
+
+* Product (Latte) with sizes (Small, Medium, Large) or one size.
 * Each size has a recipe: Large Latte = 2 shots espresso, 10 oz whole milk, 1 large cup, 1 large lid.
-* Modifiers live in groups (Milk: Whole (default), Oat, Almond. Extras: Extra shot, Vanilla). A modifier can:
-  * Add something (Extra shot: +1 shot espresso. Can differ by size.)
-  * Swap something (Oat milk: replaces whole milk with oat milk, same amount for that size.)
-* Supply groups (for Kona Ice): guests pick their own flavors at the Flavorwave, so the sale can't say which syrup was used. A recipe can say "3 oz from Syrups (any flavor)" and the comparison is done on the syrup group total. See question 7.
+* Modifiers in groups. A modifier can add something (Extra shot: +1 shot, can differ by size) or swap something (Oat milk: replaces whole milk, same amount).
+* Supply groups: when the sale can't say which supply was used (Kona Ice guests pick their own flavors), a recipe can say "3 oz from Syrups (any flavor)". Expected and actual are compared on the group total, while each flavor is still counted and reordered on its own.
+* Recipe changes only apply going forward. Each edit makes a new version with a start date. Old sales use the version in effect when they happened, and each closed shift saves its own results, so old reports never change.
 
-Recipe changes only apply going forward. Each edit makes a new recipe version with a start date. Old sales always use the version that was in effect when they happened, and each closed shift saves its own results, so old reports never change.
+### 6.4 Stock: one log of every movement
 
-### 5.4 Stock: one log of every movement
+One log (`stock_movements`) of every stock change: delivery, load (warehouse to truck), return (truck to warehouse), waste, usage, transfer, count adjustment, manager correction. Each row has supply, amount, from, to, who, when, why, cost at that moment, and shift if there is one.
 
-There is one log (`stock_movements`) of every change to stock: delivery, warehouse to truck (load), truck to warehouse (return), waste, usage, transfer between locations, count adjustment, and manager correction. Each row has the supply, amount, from, to, who, when, why, the cost at that moment, and the shift if there is one.
+Current stock is updated in the same step as the log row, so the warehouse updates itself whenever a truck is loaded, returned, or wasted.
 
-Current stock for every warehouse and truck is updated in the same step as the log row, so the warehouse updates itself whenever a truck is loaded, returned, or wasted. Nobody adjusts the warehouse by hand unless they're doing a real count.
+### 6.5 Shifts
 
-### 5.5 Shifts
+Start:
+1. Tap Start Shift (or tap a scheduled shift if scheduling is on). Pick the truck and who's on the crew. The person starting is the Lead unless they pick someone else.
+2. Starting counts are already filled in with what the app thinks is on the truck. The crew only fixes what's different. Differences are flagged as a starting count mismatch.
+3. Suggested load list: par level minus what's on the truck, rounded up to whole count units, capped by what the warehouse has. Confirm or change.
+4. Tap Loaded. Stock moves from the warehouse to the truck automatically.
+5. Loading checklist (if turned on): generator fuel, cash bank, card reader charged, whatever the business lists.
+6. The Lead confirms the starting inventory.
 
-Start of shift:
-1. Driver taps Start Shift and picks the truck.
-2. Starting counts are already filled in with what the app thinks is on the truck (last ending count, minus returns, plus anything loaded since). Driver only fixes what's different. Any difference is saved and flagged as a starting count mismatch.
-3. App shows the suggested load list: par level minus what's on the truck, rounded up to whole count units, capped at what the warehouse has. Driver confirms or changes amounts.
-4. Driver taps Loaded. Stock moves from the warehouse to the truck automatically.
-5. Loading checklist (things like generator fuel, cash bank, card reader charged). Driver checks it off before heading out.
+During: log waste, free drinks, sales tallies (if allowed), or a mid shift restock any time.
 
-During shift: driver can log waste or a mid shift restock any time.
-
-End of shift:
-1. Ending count of everything left on the truck, taken before unloading. Optional photo.
-2. Waste with a reason (spilled, expired, dropped, melted, other) and optional photo. Waste can be a supply (half a jug of milk) or a whole drink (dropped large latte, the app takes out the recipe).
-3. Optional drink counts, if no Square file is coming.
+End:
+1. Ending count of everything left, taken before unloading. Optional photo.
+2. Waste with a reason (spilled, expired, dropped, melted, or the business's own) and optional photo. Waste can be a supply or a whole drink (the app takes out the recipe).
+3. Sales and free drinks, if drivers report sales.
 4. Returns to the warehouse (after the count).
-5. Finish. Usage is calculated right away and the driver sees a short summary.
+5. The Lead reviews everything (shows who entered what) and taps Finish. Usage is calculated right away.
 
-### 5.6 Usage math
+Offline: drivers often lose signal at events, so every entry is saved on the phone first and sent when signal comes back. Each entry gets its ID on the phone, so sending it twice never doubles it. The screen shows how many changes are waiting to send. If two crew members change the same line, the latest change wins and both are kept in the history the Lead sees.
+
+### 6.6 Usage math
 
 For each supply on a shift:
-
 * Actual usage = starting count + added during shift − ending count − waste
-* Expected usage = sum over every sale of (recipe amount for that product and size, plus modifier changes) × quantity
-* Difference = actual − expected. More than zero means more was used than sales explain (over pouring, waste nobody logged, sales not rung up). Less than zero means less was used than expected (under pouring, a count mistake, or a recipe that's set too high).
+* Expected usage = for every drink (paid or free), the recipe amount for its product and size plus modifier changes, times quantity
+* Difference = actual − expected. Above zero means more was used than the drinks explain (over pouring, waste nobody logged, drinks not rung up). Below zero means less was used (under pouring, a count mistake, or a recipe set too high).
 
-A difference is flagged when it's bigger than the percent limit AND bigger than a small minimum amount (so being off by one lid doesn't flag). Managers set a company default and can override it per supply. There's also an overall limit for the whole shift, based on the dollar value of all differences.
+A difference is flagged when it's over the percent limit AND over a small minimum amount, so being off by one lid doesn't flag. Managers set a company default and can override it per supply. There's also an overall limit for the whole shift by dollar value.
 
-Worked example, whole milk (count unit half gallon = 64 oz):
+Example, whole milk (half gallon = 64 oz): start 6 (384 oz) + loaded 4 (256 oz) − end 3.5 (224 oz) − spilled 0.25 (16 oz) = 400 oz used. Sales were 30 large lattes (5 with oat milk) and 12 medium. Expected = 25 × 10 + 12 × 8 = 346 oz. Difference +54 oz (15.6%), flagged at a 10% limit.
 
-| | Half gallons | Oz |
-|---|---|---|
-| Starting count | 6 | 384 |
-| Loaded | 4 | 256 |
-| Ending count | 3.5 | 224 |
-| Waste (spilled) | 0.25 | 16 |
-| Actual usage | | 400 |
+No sales for a shift: actual usage still shows, the comparison is skipped.
 
-Sales: 30 large lattes (5 with oat milk) and 12 medium lattes. Expected whole milk = 25 × 10 oz + 12 × 8 oz = 346 oz. Difference = +54 oz (15.6%). With a 10% limit, this gets flagged.
+Every closed shift saves a results row per supply (start, added, end, waste, actual, expected, difference, cost, flagged) plus who worked it, the truck, the day, and its sales. Reports read from these saved results.
 
-If there are no sales for a shift, actual usage still shows and the comparison is simply skipped.
+### 6.7 Sales
 
-Each closed shift saves a results row per supply: start, added, end, waste, actual, expected, difference, cost, flagged or not. Plus who worked it, which truck, which day, and its sales. That's the permanent record reports read from.
+One `sales` table no matter where sales come from. Every row: company, truck, shift, time, product, size, quantity, modifiers, price, paid or free (with free reason), source (`driver`, `manager`, `csv`, `square`), and the source's own sale ID.
 
-### 5.7 Sales (works with any source)
+Business settings:
+* Who reports sales: drivers, managers, or both.
+* Which source wins when a shift has more than one. Default order: file (CSV or Square), then manager, then driver. The business can change the order.
+* Every other source for that shift is kept and compared. If they don't match, it's flagged. That's the "make sure both line up" check, done automatically.
 
-One `sales` table. Every row has: company, truck, time sold, product, size, quantity, modifiers, price, source (`manual`, `csv`, or `square`), and the source's own ID for the sale.
+Free drinks: whoever reports sales can add free drinks with a reason. Built in reasons: drop replacement (a customer dropped theirs and got a new one), giveaway or promo, employee drink. Businesses can add their own. Free drinks use supplies like any drink, so they count in expected usage, but they bring in $0. Reports show how many of each and what they cost.
 
-* No double counting: a unique rule on (company, source, source sale ID) means the same sale can't be saved twice. Uploading the same file twice does nothing new.
-* Matching items: a mapping table remembers that Square's "Lg Latte" means Latte, Large. The first upload asks a manager to match any unknown names once. After that it's automatic. The future Square sync uses this same table.
-* Matching to shifts: a sale belongs to the shift on that truck whose start and end time cover it (with a small grace window). Sales with no shift get flagged ("Truck 2 had sales on Saturday but no shift was recorded").
-* If a shift has both driver counts and Square or CSV sales, the Square or CSV numbers are used and the driver counts are kept for reference. See question 9.
-* Every upload is saved as a batch, so a bad upload can be undone in one tap.
+No double counting: a unique rule on (company, source, source sale ID) stops the same sale from being saved twice.
 
-### 5.8 Flags ("Needs attention")
+CSV upload: works with any POS export. The first time, the manager matches columns (which column is the item, size, quantity, time, and so on), and the app remembers it. A Square preset is built in. Item names are matched to products once ("Lg Latte" means Latte, Large) and remembered. Every upload is a batch that can be undone in one tap.
 
-Flags land in a manager inbox and in the daily report. Each one can be marked reviewed with a note. Types:
+Sales are tied to the shift on that truck whose start and end time cover them (with a small grace window). Sales with no shift get flagged.
+
+### 6.8 Manager count checks (optional)
+
+Some businesses have drivers report sales and then a manager recounts certain items (like cups) to make sure everything lines up. The manager's count is the one that counts.
+
+* The business picks which supplies get checked (for example every cup size).
+* After a shift is finished, it shows as "Waiting for count check".
+* The manager enters their count for those supplies. By default it's a blind count: they don't see the driver's numbers until they've entered theirs.
+* The manager's count replaces the driver's ending count for those supplies (business setting, on by default). The shift is recalculated.
+* The app shows, per shift: drinks reported (paid and free) by size, cups used by the manager's count, and the driver's count next to the manager's. Anything off by more than the limit is flagged.
+* The check needs to happen before the truck goes out again. If a new shift already started, the old one is marked "check missed".
+* Managers get a reminder if a shift waits too long for its check.
+
+### 6.9 Flags ("Needs attention")
+
+Flags land in a manager inbox and in the daily report, and can be marked reviewed with a note:
 * Expected vs actual difference over the limit
 * Starting count doesn't match last known stock
-* Driver with a pattern of high waste (compared to the company average over the last 30 days)
-* Sales with no shift, or a shift with unmatched sales items
-* Shift left open too long
+* Sales sources don't match each other
+* Manager count check doesn't match the driver's count or the reported drinks
+* Driver with a pattern of high waste (compared to the business's average over 30 days)
+* Sales with no shift, or sales items that aren't matched to a product
+* Shift left open too long, or count check missed
 * Expired items still in stock
 
-### 5.9 Expiration dates
+### 6.10 Expiration dates (optional)
 
-Supplies marked "tracks expiration" ask for a date when a delivery is received (filled in from the usual shelf life, editable). Stock is tracked by batch. Loading a truck sends the oldest batch first, and usage and waste come out of the oldest first too. A daily job warns a set number of days ahead, and expired batches get flagged with a "log as waste" button.
+Supplies marked "tracks expiration" ask for a date when a delivery comes in (filled in from usual shelf life). Stock is tracked by batch. Loading sends the oldest batch first, and usage and waste come out oldest first. Alerts go out a set number of days ahead (default 3), and expired batches get a "log as waste" button.
 
-### 5.10 Par levels and restock
+### 6.11 Par levels
 
-Each truck has a par level per supply (the amount it should leave with). Supplies with no par level don't show up on that truck's count screens, which keeps the driver's list short. Weekly, the app suggests new par levels from the average usage of the last 10 shifts plus a cushion (default 25%), rounded up to whole count units. See question 10.
+A par level is how much of each supply a truck should have when it heads out. Example: Truck 1 should leave with 6 half gallons of milk. If it has 2, the load list says load 4.
 
-### 5.11 Order lists
+Each truck has its own par levels. Supplies with no par level don't show on that truck's count screens, which keeps the list short. Every week the app suggests new par levels from the last 10 shifts' average usage plus a cushion (default 25%), rounded up to whole count units. A manager approves with one tap. A business can turn on auto updates instead.
 
-Every morning (and right after something goes low), the app builds draft orders grouped by supplier: everything at or below its reorder level, ordered up to its "order up to" level, rounded to the supplier's case size. A manager reviews, edits if needed, and taps Approve and Send, which emails the order to the supplier. Nothing goes outside the company without that tap. When the delivery shows up, Receive Delivery opens that order already filled in, so receiving is mostly tapping "all came in" and fixing what didn't.
+### 6.12 Order lists
 
-### 5.12 Corrections and history
+Every morning (and right after something goes low), the app builds draft orders by supplier: everything at or below its reorder level, ordered up to its "order up to" level, rounded to case size. A manager reviews and taps Approve and Send, which emails the supplier (or just marks it ordered for "we order ourselves" suppliers). Nothing leaves the company without that tap. Receive Delivery opens the order already filled in.
 
-A manager can fix a count on a closed shift. They have to give a reason. The app saves who changed it, when, the old value, the new value, and why, then recalculates that shift. Truck stock only changes if that shift was the truck's latest count. Every edit to setup data (products, recipes, supplies, prices, accounts) also goes in an audit log.
+### 6.13 Scheduling (optional)
 
-### 5.13 Turning things off vs deleting
+Businesses that already use a scheduling app can leave this off. When it's on:
+* Managers build the schedule: truck, day, start and end time, event or spot name, Lead and Crew.
+* Shifts can repeat weekly.
+* Drivers see My Schedule and get a push and email when they're scheduled or something changes.
+* Starting a shift from the schedule fills in the truck and crew.
+* Reminders go out if a scheduled shift isn't started on time.
 
-Turning something off hides it from drivers and from new lists, but keeps all its history and it still shows in old reports. Deleting is only allowed for things that were never used. Anything with history can only be turned off.
+With scheduling off, reminders still go out for shifts left open too long.
 
-## 6. Screens
+### 6.14 Corrections and history
 
-Driver (phone first, big buttons, one hand):
-* Home: Start Shift or Continue Shift, plus any reminders
-* Start shift: pick truck, confirm starting counts, load list, loading checklist
-* During shift: log waste, mid shift restock
-* End shift: ending counts (with photo), waste, drink counts, returns, finish
-* Shift summary and My Shifts history
+A manager can fix a count on a closed shift with a reason. The app saves who, when, old value, new value, and why, then recalculates. Truck stock only changes if that shift was the truck's latest count. Every edit to setup data (products, recipes, supplies, prices, people, settings) goes in an audit log.
+
+### 6.15 Turning things off vs deleting
+
+Turning something off hides it from drivers and new lists but keeps its history in reports. Deleting is only allowed for things that were never used.
+
+## 7. Screens
+
+Driver (phone first, big buttons, works one handed):
+* Home: Start or Continue Shift, My Schedule (if on), reminders
+* Start shift: truck and crew, starting counts, load list, checklist, Lead confirm
+* During: waste, free drinks, sales tally, restock
+* End: ending counts, waste, sales, returns, Lead review and Finish
+* Shift summary, My Shifts
 
 Manager:
-* Needs Attention inbox (flags, approvals waiting, open shifts)
+* Needs Attention: flags, orders to approve, count checks waiting, open shifts
 * Warehouse: stock, Receive Delivery, count, transfer, expiring soon
-* Trucks: current stock, par levels and suggestions, shift history
-* Orders: draft orders by supplier, approve and send, receive
-* Sales: upload Square CSV, match items, view by truck and day
-* Reports: usage, waste, driver comparison, profit, with date ranges and CSV export
+* Trucks: stock, par levels and suggestions, shift history
+* Orders: drafts by supplier, approve and send, receive
+* Sales: upload CSV, match columns and items, enter sales for a shift
+* Count checks
+* Schedule (if on)
+* Reports: usage, waste, free drinks, count checks, driver comparison, profit, CSV export
 * Shift detail with corrections
 
-Admin (also gets everything a manager does):
-* Setup checklist for new companies (locations, trucks, supplies, products, people)
-* Locations, trucks, suppliers, supplies, products and recipes, modifiers
-* CSV import for supplies and products, with downloadable templates and a preview before saving
+Admin (plus everything a manager has):
+* Owner dashboard: today's trucks, sales, costs, flags at a glance
+* Setup checklist and starter kits
+* Locations, truck types, trucks, suppliers, supplies, products and recipes, modifiers
+* CSV import for supplies and products with templates and a preview
 * People and invites
-* Notification settings (who gets which emails), company settings (time zone, report times, limits)
+* Settings: features on or off, who reports sales, limits, report times and recipients, time zone
 
-## 7. Automation
+App Owner:
+* Sign up requests: approve or decline
+* Companies: status, size, last active, suspend or reactivate
+* Database and storage use
 
-Things that happen instantly when something is saved:
-* Warehouse and truck stock update on every load, return, waste, delivery, and count
-* Shift close: actual usage, expected usage (if sales exist), differences, flags
+## 8. Automation
+
+Happens instantly when something is saved:
+* Stock updates on every load, return, waste, delivery, and count
+* Shift finish: actual usage, expected usage, differences, flags
 * Starting count mismatch flag
-* Sales upload: matches sales to shifts and recalculates those shifts
-* Low stock check after any stock change
+* Sales upload or entry: match to shifts, recalculate, compare sources
+* Manager count check: recalculate, compare, flag
+* Low stock check
 
-Scheduled jobs (each one runs per company in that company's time zone):
+Scheduled (each runs per company in that company's time zone, times are business settings):
 
-| Job | When (defaults, all changeable) | What it does | Who hears about it |
+| Job | Default time | What it does | Who hears about it |
 |---|---|---|---|
-| Daily inventory and usage reports | Every evening, 8 pm | Warehouse and truck stock, low items, each shift's usage, differences, waste, cost | People you pick |
-| Low stock sweep | Every morning, 6 am (plus instantly on change) | Warehouse and truck supplies at or below reorder level | Managers, once per item until it's restocked |
-| Order lists | Every morning, 6 am (plus after low stock) | Builds or refreshes draft orders per supplier | Managers. Nothing is sent until approved |
-| Par level suggestions | Sunday night | New par suggestions per truck | Managers approve (see question 10) |
-| Shift not started | Every 15 minutes | Scheduled driver hasn't started 30 min after start time | Driver, then manager |
-| Shift not finished | Every 15 minutes | Shift still open past its expected end | Driver reminder, then manager alert after a set number of hours |
-| Expiration check | Every morning | Items expiring in the next 3 days, and expired items | Managers and the truck's driver |
+| Daily inventory and usage reports | 8 pm | Stock, low items, each shift's usage, differences, waste, free drinks, cost | People the business picks |
+| Low stock sweep | 6 am (and instantly) | Supplies at or below reorder level, warehouse and trucks | Managers, once per item until restocked |
+| Order lists | 6 am (and after low stock) | Builds draft orders by supplier | Managers. Nothing sent until approved |
+| Par level suggestions | Sunday night | New suggestions per truck | Managers approve (or auto) |
+| Shift not started (scheduling on) | Every 15 min | Scheduled shift not started 30 min after start time | Lead, then managers |
+| Shift not finished | Every 15 min | Shift still open past its end time or a set number of hours | Lead, then managers |
+| Count check waiting | Every hour | Shift waiting for a manager count too long | Managers |
+| Expiration check | 6 am | Items expiring soon, expired items | Managers and the truck's Lead |
 | Pattern flags | Every night | High waste drivers, repeat differences, sales with no shift | Manager inbox |
-| Weekly summary | Monday 7 am | Waste, usage trends, cost per truck, profit, open flags | People you pick |
-| Monthly summary | 1st of the month, 7 am | Same, for the month | People you pick |
-| Cleanup | Every night | Expired invites, old sessions | Nobody |
-| Square sync (later) | Every night, plus a "sync now" button | Pull yesterday's sales for each linked truck | Only on errors |
+| Weekly summary | Monday 7 am | Waste, free drinks, usage trends, cost per truck, profit, flags | People the business picks |
+| Monthly summary | 1st, 7 am | Same, monthly | People the business picks |
+| Photo cleanup | Every night | Removes photos older than the business setting | Nobody |
+| Backup | Weekly | Database backup through GitHub Actions | App Owner on failure |
+| Square sync (later) | Every night, plus a button | Pull yesterday's sales per linked truck | Only on errors |
 
-Every job writes down that it ran for that company and period, so a retry never sends the same report twice.
+How it runs: `pg_cron` runs small database jobs every few minutes. They write messages into an outbox table. An Edge Function sends what's in the outbox by email and push. Every job records that it ran for that company and period, so a retry never sends anything twice.
 
-## 8. Square later: where it plugs in
+## 9. Square later
 
 Built now:
-* The `sales` table with `source`, the source's sale ID, and the unique rule that stops double counting
-* The item mapping table (used by CSV uploads now, by Square later)
-* One shared `ingestSales()` step that every source goes through: match items, skip duplicates, save, link to shifts, recalculate. CSV upload and driver counts both use it.
-* A `sales/sources/` folder with the CSV and manual sources and a clearly marked spot for `square.ts`
+* The `sales` table with `source`, the source's sale ID, and the unique rule against double counting
+* The item mapping table (used by CSV now, Square later)
+* One shared ingest function every source goes through: match items, skip duplicates, save, tie to shifts, recalculate
+* A clearly marked spot for the Square source
 
-Added later (when you say so):
-* Square OAuth: each truck gets a "Connect Square" button that links that truck to its own Square account
-* A `square_connections` table (truck, Square merchant and location IDs, access and refresh tokens encrypted with a key that lives only in the server settings, token expiry, last sync time)
-* Nightly sync that pulls orders for the day and sends them through `ingestSales()` with `source = square` and Square's order and line item IDs, so nothing counts twice
-* Matching Square catalog items and variations to products and sizes, using the same mapping table
-
-The full notes will live in CLAUDE.md.
-
-## 9. Database tables
-
-All tables carry `company_id` (except `companies` itself).
-
-* Companies and people: `companies`, `company_settings`, `users`, `sessions`, `invites`, `notification_settings`, `push_subscriptions`, `audit_log`
-* Places: `locations`, `trucks`, `driver_schedules`, `checklist_items`
-* Supplies: `suppliers`, `supplies`, `supply_units`, `supply_groups`
-* Products: `products`, `product_sizes`, `modifier_groups`, `modifiers`, `recipe_versions`, `recipe_lines`, `modifier_effects`
-* Stock: `stock_levels`, `stock_batches`, `stock_movements`, `stock_counts`
-* Shifts: `shifts`, `shift_counts`, `shift_results`, `shift_checklist`, `count_corrections`
-* Waste: `waste_logs`, `waste_reasons`
-* Sales: `sales`, `sale_modifiers`, `sales_imports`, `item_mappings`
-* Ordering: `purchase_orders`, `purchase_order_lines`, `deliveries`, `delivery_lines`
-* Par levels: `truck_pars`, `par_suggestions`
-* Alerts and jobs: `flags`, `notifications`, `job_runs`
-* Files: `photos`
-* Later: `square_connections`
+Added later, when the owner says so: per truck "Connect Square" (OAuth), a `square_connections` table with tokens encrypted, a nightly sync through the same ingest function with `source = square`, and matching Square catalog items to products. Full notes in CLAUDE.md.
 
 ## 10. Code layout
 
 ```
-src/
-  app/                 screens (driver, manage, admin, setup, auth)
-  server/
-    db/                schema, migrations, company scoped database helper
-    auth/              login, sessions, invites, permissions
-    setup/             locations, trucks, supplies, products, recipes, CSV import
-    inventory/         stock movements, batches, deliveries, counts
-    shifts/            shift flow and usage math
-    waste/
-    sales/
-      ingest.ts        the one shared path every sale goes through
-      sources/
-        csv.ts         Square CSV export (now)
-        manual.ts      driver drink counts (now)
-        square.ts      Square sync (later)
-    orders/            order lists, approve and send
-    alerts/            flags and notifications (email, push)
-    reports/
-  jobs/                scheduled job definitions and the worker
+src/                     the phone app (React + TypeScript)
+  app/                   routes and layout
+  features/              auth, owner, people, setup, inventory, shifts, waste, sales, schedule, reports
+  components/            shared UI pieces
+  lib/                   Supabase client, offline queue, formatting, units
+supabase/
+  migrations/            database tables, security rules, functions (SQL)
+  functions/             Edge Functions (email, push, invites, CSV, jobs, later Square)
 tests/
+  db/                    database and company separation tests (run against real Postgres)
+  unit/                  math and logic tests
 docs/
 CLAUDE.md
 ```
 
 ## 11. Build phases
 
-Each phase ends with working, tested code pushed to the branch, and a short note on how to try it.
+Each phase ends with tested code pushed to the branch and a short note on how to try it.
 
-0. Foundation: project setup, database, CLAUDE.md, test setup, installable PWA shell.
-1. Sign up, roles, invites, login. Done when: you can sign up a company, invite a manager and a driver, they set their own passwords, each only sees their screens, and the company separation tests pass.
-2. Locations, trucks, suppliers, supplies with units, products, sizes, modifiers, versioned recipes, CSV import with templates and preview, turning things on and off, admin setup checklist.
-3. Warehouse and truck stock, the movement log, Receive Delivery, counts, transfers, expiration batches.
-4. Shift flow (start counts, load list from manual par levels, loading, end counts, returns), usage math, shift summary, starting count mismatch flag.
-5. Waste (supply or whole drink), reasons, photos, warehouse waste, waste report.
-6. Sales table, Square CSV upload with item matching, driver drink counts, expected vs actual, limits, flags.
-7. Scheduled jobs: reports, alerts, reminders, order lists with approve and send, par suggestions, emails and push.
-8. Extras: loading checklist, driver comparison, photos on end counts, profit view, manager corrections with history, report polish and CSV export.
-9. Square connection (when you say so).
+0. Foundation: project setup, database test setup, CI, PWA shell, CLAUDE.md.
+1. Accounts: company sign up, App Owner approvals, roles, invites, login, password reset, people management, basic company settings, audit log, email outbox.
+2. Setup: starter kits, locations, truck types, trucks, suppliers, supplies with units and groups, products with sizes, modifiers, versioned recipes, CSV import, turning things on and off, feature settings, setup checklist.
+3. Stock: warehouse and truck stock, movement log, Receive Delivery, counts, transfers, expiration batches.
+4. Shifts: Lead and Crew, prefilled starting counts, load list from par levels, loading, end counts, returns, Lead confirm, usage math, summary, mismatch flag, offline saving, live crew updates.
+5. Waste: supply or whole drink, reasons, photos, warehouse waste, waste report.
+6. Sales: sales table, CSV upload with column and item matching, sales entry by drivers or managers with free drinks, source priority and comparison, manager count checks, expected vs actual, limits, flags.
+7. Scheduling (optional feature).
+8. Automation: all scheduled jobs, emails, push notifications, order lists with approve and send, par suggestions, reminders, backups.
+9. Extras: loading checklist, driver comparison, photos on end counts, profit view, corrections with history, report polish and CSV export.
+10. Square connection (when the owner says so).
 
 ## 12. Testing
 
-* Unit tests for usage math, recipe and modifier math, unit conversions, CSV parsing, par and reorder math
-* Company separation tests on every data area
-* Phone sized browser tests for sign up, invite, and a full driver shift
-* Every job tested for "runs twice, sends once"
+* Unit tests: usage math, recipe and modifier math, unit conversions, CSV parsing, par and reorder math
+* Database tests on real Postgres: every table's security rules with two companies and all roles
+* Phone sized browser tests for sign up, invite, and a full shift
+* Every job: "runs twice, sends once"
 
-## 13. Open questions
+## 13. Decisions made (owner can change any of these)
 
-See the chat for the full wording. Short list:
-1. One company with two truck types (Kona Ice, Toms Coffee), or two separate companies?
-2. Who can sign up, and do you need to approve new companies? Any billing?
-3. Where do driver schedules come from (needed for "hasn't started" reminders)?
-4. Driver reminders by push, email, or text?
-5. Do drivers lose cell signal at events (offline counts)?
-6. One driver per shift or crews?
-7. Compare Kona syrup as one group total?
-8. Sample files: a Square item sales export, plus your current supply and product lists
-9. If both driver counts and a Square file exist, the file wins?
-10. Par levels: auto update or suggest and approve?
-11. What can managers do with other manager accounts?
-12. Reorder amounts and how suppliers take orders
-13. Domain for sending email, and hosting preference
-14. More than one warehouse?
+1. Kona Ice and Toms Coffee: one company, two truck types.
+2. Anyone can sign up, the App Owner approves. Pending companies can set up but can't invite or email.
+3. App Owner sees company info and size, not their inventory or sales.
+4. Scheduling is built in as an optional feature.
+5. Reminders by push and email. No text messages (they cost money).
+6. Offline saving on the phone.
+7. Lead and Crew on shifts.
+8. Supply groups for shared supplies like Kona syrup.
+9. Who reports sales and which source wins are business settings. Manager count checks are an optional feature, blind by default, and the manager's count wins.
+10. Par levels: suggest and approve, auto updates optional.
+11. Managers handle drivers. Admins handle managers and admins.
+12. Reorder amounts and supplier order methods are set by each business.
+13. Free hosting only: Cloudflare Pages and Supabase. Gmail for email until there's a domain.
+14. Any location can hold stock. Each truck has a home location it loads from.
+
+## 14. What the owner needs to do (when we get there)
+
+1. Make a free Supabase account and project (needed to try the app live after phase 1).
+2. Make a free Cloudflare account and connect this GitHub repo to Cloudflare Pages.
+3. Make a Gmail account just for the app, turn on 2 step verification, and create an app password.
+4. Allow `supabase.co` in this cloud session's network settings so the app can be tested against the real project.
+
+Step by step instructions will be in `docs/SETUP.md`.
