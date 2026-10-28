@@ -150,7 +150,7 @@ Phases from `docs/PLAN.md`:
 0. Foundation: done
 1. Accounts: built and tested locally (sign up, App Owner approvals, roles, invites, login, password reset, people, business settings, audit log, email outbox). Not deployed yet: waiting on the owner to finish docs/SETUP.md.
 2. Setup: built and tested locally (settings and feature switches, lists, locations, trucks, suppliers, supplies with units and groups, products, sizes, add ons, versioned recipes, spreadsheet import, starter kits).
-3. Stock: not started
+3. Stock: built and tested locally (stock levels, one log of every move, deliveries, counts, moves between places, adjustments, expiration batches used oldest first, history with CSV export).
 4. Shifts: not started
 5. Waste: not started
 6. Sales: not started

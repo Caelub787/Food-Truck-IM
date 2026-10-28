@@ -9,6 +9,11 @@ import { SetPasswordPage } from '@/features/auth/SetPasswordPage'
 import { SignUpPage } from '@/features/auth/SignUpPage'
 import { WelcomePage } from '@/features/auth/WelcomePage'
 import { HomePage } from '@/features/home/HomePage'
+import { CountPage } from '@/features/inventory/CountPage'
+import { HistoryPage } from '@/features/inventory/HistoryPage'
+import { InventoryPage } from '@/features/inventory/InventoryPage'
+import { MovePage } from '@/features/inventory/MovePage'
+import { ReceivePage } from '@/features/inventory/ReceivePage'
 import { OwnerPage } from '@/features/owner/OwnerPage'
 import { PeoplePage } from '@/features/people/PeoplePage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
@@ -49,6 +54,11 @@ export const router = createBrowserRouter([
                 element: <RequireRole roles={['admin', 'manager']} />,
                 children: [
                   { path: 'people', element: <PeoplePage /> },
+                  { path: 'inventory', element: <InventoryPage /> },
+                  { path: 'inventory/receive', element: <ReceivePage /> },
+                  { path: 'inventory/count', element: <CountPage /> },
+                  { path: 'inventory/move', element: <MovePage /> },
+                  { path: 'inventory/history', element: <HistoryPage /> },
                   { path: 'setup', element: <SetupHome /> },
                   { path: 'setup/locations', element: <LocationsPage /> },
                   { path: 'setup/trucks', element: <TrucksPage /> },

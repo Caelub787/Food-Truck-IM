@@ -79,6 +79,23 @@ function setupTables() {
     { supply_id: 's-beans', group_id: null, quantity: 27, unit_id: 's-beans-shot' },
     { supply_id: 's-milk', group_id: null, quantity: 14, unit_id: null },
   ])
+  t.stock_levels = [
+    ['loc-1', 's-milk', 900], ['loc-1', 's-oat', 200], ['loc-1', 's-beans', 9072], ['loc-1', 's-cherry', 1024], ['loc-1', 's-blue', 128],
+    ['loc-1', 's-cup-s', 400], ['loc-1', 's-cup-l', 3000], ['loc-1', 's-ice', 400],
+    ['tr-1', 's-cherry', 256], ['tr-1', 's-cup-s', 150], ['tr-1', 's-ice', 80],
+  ].map(([place_id, supply_id, quantity]) => ({ place_id, supply_id, quantity, updated_at: '2026-10-28T12:00:00Z' }))
+  const soon = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10)
+  t.stock_batches = [
+    { id: 'b-1', place_id: 'loc-1', supply_id: 's-milk', expires_on: soon, received_on: '2026-10-20', quantity: 384 },
+    { id: 'b-2', place_id: 'loc-1', supply_id: 's-milk', expires_on: '2026-11-20', received_on: '2026-10-27', quantity: 516 },
+  ]
+  t.stock_movements = [
+    { id: 'mv-a', supply_id: 's-milk', quantity: 384, kind: 'delivery', from_place_id: null, to_place_id: 'loc-1', unit_cost: 0.05, shift_id: null, reason: null, note: null, created_by: 'u-m1', created_at: '2026-10-27T09:00:00Z' },
+    { id: 'mv-b', supply_id: 's-cup-s', quantity: 150, kind: 'load', from_place_id: 'loc-1', to_place_id: 'tr-1', unit_cost: 0.045, shift_id: null, reason: null, note: null, created_by: 'u-d1', created_at: '2026-10-28T08:00:00Z' },
+    { id: 'mv-c', supply_id: 's-ice', quantity: 20, kind: 'adjustment', from_place_id: 'loc-1', to_place_id: null, unit_cost: 0.3, shift_id: null, reason: 'Count', note: null, created_by: 'u-admin', created_at: '2026-10-28T10:00:00Z' },
+  ]
+  t.deliveries = []
+  t.profiles = []
   t.modifier_versions.push({ id: 'mv-1', modifier_id: 'm-oat', effective_from: '2026-10-01T12:00:00Z', modifier_effects: [{ kind: 'swap', size_name: null, supply_id: 's-milk', group_id: null, quantity: null, unit_id: null, to_supply_id: 's-oat' }] })
   return t
 }

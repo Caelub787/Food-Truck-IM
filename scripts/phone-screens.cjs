@@ -328,6 +328,46 @@ async function runSetup(browser, size, label) {
   return { checks, errors }
 }
 
+async function runInventory(browser, size, label) {
+  const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
+  state.tables.profiles = state.people
+  const checks = []
+
+  await page.goto(`${base}/inventory`)
+  await seen('Value on hand').waitFor()
+  await seen('Expiring soon').waitFor()
+  checks.push('low and expiring stock is marked')
+  await shot('40-inventory')
+
+  // A driver loads 2 sleeves of small cups onto Truck 1 from their phone.
+  await markPage(page)
+  const cups = state.tables.stock_levels.find((l) => l.place_id === 'loc-1' && l.supply_id === 's-cup-s')
+  cups.quantity = 300
+  live.signal('company:c1', 'stock_levels')
+  await seen('6 sleeves').waitFor({ timeout: 3000 })
+  await assertNoReload(page, 'stock change')
+  checks.push('stock numbers update live')
+
+  await seen('Whole milk').click()
+  await seen('Expiration dates').waitFor()
+  await shot('41-supply-stock')
+  await page.getByRole('button', { name: 'Close' }).last().click()
+
+  for (const [path, text, name] of [
+    ['/inventory/receive', 'What came in', '42-receive'],
+    ['/inventory/count?place=tr-1', 'Count stock', '43-count'],
+    ['/inventory/move', "What's moving", '44-move'],
+    ['/inventory/history', 'Stock history', '45-history'],
+  ]) {
+    await page.goto(`${base}${path}`)
+    await seen(text).waitFor()
+    await shot(name)
+  }
+  checks.push('every inventory screen opens')
+  await context.close()
+  return { checks, errors }
+}
+
 ;(async () => {
   require('node:fs').mkdirSync(OUT, { recursive: true })
   const browser = await chromium.launch()
@@ -336,7 +376,7 @@ async function runSetup(browser, size, label) {
     ['phone', { width: 390, height: 844 }],
     ['desktop', { width: 1366, height: 860 }],
   ]) {
-    for (const flow of [run, runSetup]) {
+    for (const flow of [run, runSetup, runInventory]) {
       const { checks, errors } = await flow(browser, size, label)
       console.log(`${label} ${flow.name}: ${checks.length} checks passed: ${checks.join('; ')}`)
       if (errors.length) {
