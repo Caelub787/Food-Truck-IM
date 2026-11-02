@@ -4,7 +4,7 @@ These run every migration against a real Postgres and test the security rules wi
 
 They need a Postgres you can connect to as a superuser. By default they use `postgres://postgres:postgres@localhost:5432/postgres`. Set `TEST_DATABASE_URL` to use a different one.
 
-The tests create (and replace) a database called `truckstock_test`. `supabase-shim.sql` stands in for the parts of Supabase the migrations use (the `anon`, `authenticated`, and `service_role` roles, `auth.users`, `auth.uid()`, `auth.jwt()`).
+The tests create (and replace) a database called `food_truck_im_test`. `supabase-shim.sql` stands in for the parts of Supabase the migrations use (the `anon`, `authenticated`, and `service_role` roles, `auth.users`, `auth.uid()`, `auth.jwt()`).
 
 Helpers in `helpers.ts`:
 * `as(user, q => ...)` runs queries as a logged in user, `'anon'`, or `'service'`, with the security rules on.

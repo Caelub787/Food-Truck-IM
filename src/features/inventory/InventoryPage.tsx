@@ -3,9 +3,11 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { EmptyState, SearchBox } from '@/components/forms'
 import { ResponsiveList } from '@/components/ResponsiveList'
+import { SupplyPhoto } from '@/components/SupplyPhoto'
 import { Badge, Card, PageHeader, Select, Spinner } from '@/components/ui'
 import { useSettings } from '@/features/settings/useSettings'
 import { useSupplyCatalog, type Supply } from '@/features/setup/data'
+import { useSupplyPhotos } from '@/lib/photos'
 import { matchesSearch } from '@/lib/search'
 import { findUnit, formatAmount, formatMoney } from '@/lib/units'
 import { daysUntil, useBatches, usePlaces, useStockLevels } from './data'
@@ -20,6 +22,7 @@ export function InventoryPage() {
   const settings = useSettings()
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState<string | null>(null)
+  const photo = useSupplyPhotos(catalog.data?.supplies)
 
   const active = (places.data ?? []).filter((p) => p.active)
   const placeId = params.get('place') ?? active.find((p) => p.kind === 'location')?.id ?? active[0]?.id ?? ''
@@ -135,6 +138,7 @@ export function InventoryPage() {
               rowKey={(s) => s.id}
               title={(s) => s.name}
               subtitle={(s) => amount(s)}
+              leading={photo && ((s) => <SupplyPhoto url={photo(s)} />)}
               badge={status}
               onSelect={(s) => setOpen(s.id)}
               actionLabel="Details"

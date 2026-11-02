@@ -1,4 +1,4 @@
-export const APP_NAME = 'TruckStock'
+export const APP_NAME = 'Food Truck IM'
 
 export const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', driver: 'Driver' } as const
 export type Role = keyof typeof ROLE_LABELS

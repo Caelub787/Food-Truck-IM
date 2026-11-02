@@ -1,13 +1,14 @@
 // The demo's pretend Supabase. It answers the app's database, login, storage,
 // and live update calls from memory, inside the browser. Nothing leaves the
 // page, and everything resets on reload.
+import { samplePictures } from './pictures'
 import { DEMO_COMPANY, people, seed, type Row } from './seed'
 
-export const DEMO_URL = 'https://demo.truckstock.invalid'
+export const DEMO_URL = 'https://demo.foodtruckim.invalid'
 
 let db = seed()
 let userId = 'u-admin'
-const photos = new Map<string, string>()
+const photos = new Map<string, string>(samplePictures(DEMO_COMPANY))
 ;(globalThis as { __demoPhotos?: Map<string, string> }).__demoPhotos = photos
 
 const now = () => new Date().toISOString()
@@ -730,6 +731,11 @@ async function handle(req: Request): Promise<Response> {
   if (path.startsWith('/rest/v1/')) return tableRequest(req, path.slice('/rest/v1/'.length), url.searchParams)
 
   if (path.startsWith('/storage/v1/object/sign/')) return json({ signedURL: `${path.slice('/storage/v1'.length)}?token=demo` })
+  if (path === '/storage/v1/object/photos' && req.method === 'DELETE') {
+    const { prefixes } = (await req.json()) as { prefixes: string[] }
+    for (const p of prefixes) photos.delete(p)
+    return json(prefixes.map((name) => ({ name })))
+  }
   if (path.startsWith('/storage/v1/object/photos/')) {
     const key = decodeURIComponent(path.slice('/storage/v1/object/photos/'.length))
     const blob = await req.blob()
@@ -761,7 +767,7 @@ export function installDemo() {
   }
   const RealSocket = globalThis.WebSocket
   globalThis.WebSocket = function (url: string | URL, protocols?: string | string[]) {
-    if (String(url).includes('demo.truckstock.invalid')) return new DemoSocket(String(url))
+    if (String(url).includes('demo.foodtruckim.invalid')) return new DemoSocket(String(url))
     return new RealSocket(url, protocols)
   } as unknown as typeof WebSocket
   Object.assign(globalThis.WebSocket, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 })
@@ -776,5 +782,7 @@ export const currentUser = () => userId
 /** Starts over with fresh sample data. */
 export function resetDemo() {
   db = seed()
+  photos.clear()
+  for (const [path, url] of samplePictures(DEMO_COMPANY)) photos.set(path, url)
   signal(Object.keys(db))
 }

@@ -37,6 +37,7 @@ export type Supply = Named & {
   diff_percent: number | null
   diff_min_qty: number | null
   notes: string | null
+  photo_path: string | null
 }
 export type Product = Named & { category: string | null; truck_type_id: string | null }
 export type ProductSize = Named & { product_id: string; price: number | null }

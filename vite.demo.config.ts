@@ -16,7 +16,7 @@ export default defineConfig({
   },
   define: {
     'import.meta.env.VITE_DEMO': JSON.stringify('1'),
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://demo.truckstock.invalid'),
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://demo.foodtruckim.invalid'),
     'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify('demo'),
   },
   plugins: [react(), tailwindcss()],

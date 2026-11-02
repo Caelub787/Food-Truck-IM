@@ -58,7 +58,7 @@ export async function sendMail(mail: Mail): Promise<void> {
   }
 }
 
-/** Splits "TruckStock <app@gmail.com>" into its name and address. */
+/** Splits "Food Truck IM <app@gmail.com>" into its name and address. */
 export function parseFrom(from: string): { name?: string; email: string } {
   const match = from.match(/^\s*(.*?)\s*<([^>]+)>\s*$/)
   if (!match) return { email: from.trim() }

@@ -17,8 +17,8 @@ const code = readFileSync(join(dist, js), 'utf8')
   .replace(/(["'`])\/favicon\.svg\1/g, JSON.stringify(logo))
   .replaceAll('</script', '<\\/script')
 const styles = readFileSync(join(dist, css), 'utf8').replaceAll('</style', '<\\/style')
-const page = `<title>TruckStock Demo</title>
-<meta name="description" content="A clickable demo of TruckStock with made up sample data.">
+const page = `<title>Food Truck IM Demo</title>
+<meta name="description" content="A clickable demo of Food Truck IM with made up sample data.">
 <style>${styles}
 html, body { background: #f8fafc; color: #0f172a; color-scheme: light; }</style>
 <div id="root"></div>

@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { useSyncExternalStore } from 'react'
 import { friendlyError } from './errors'
 import { refreshTables } from './live'
+import { uploadPhoto } from './photos'
 import { supabase } from './supabase'
 
 // Things done with weak or no signal wait on the phone and go out when the
@@ -55,11 +56,7 @@ export function isNetworkError(error: unknown) {
 }
 
 async function run(job: Job) {
-  if (job.upload) {
-    const blob = await (await fetch(job.upload.dataUrl)).blob()
-    const { error } = await supabase.storage.from('photos').upload(job.upload.path, blob, { upsert: true, contentType: blob.type })
-    if (error) throw error
-  }
+  if (job.upload) await uploadPhoto(job.upload.path, job.upload.dataUrl)
   const { error } = await supabase.rpc(job.fn, job.args)
   if (error) throw new Error(error.message)
 }

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
 type DemoApi = { switchUser: (id: string) => void; resetDemo: () => void; currentUser: () => string }
-const api = () => (window as unknown as { __truckstockDemo?: DemoApi }).__truckstockDemo
+const api = () => (window as unknown as { __foodTruckDemo?: DemoApi }).__foodTruckDemo
 
 const roles = [
   { id: 'u-admin', label: 'Sam (admin)' },

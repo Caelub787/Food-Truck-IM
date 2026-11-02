@@ -2,7 +2,7 @@ import { assertEquals, assertStringIncludes, assertThrows } from 'jsr:@std/asser
 import { parseFrom } from './mailer.ts'
 import { escapeHtml, renderTemplate } from './templates.ts'
 
-const ctx = { appName: 'TruckStock', siteUrl: 'https://app.example.com' }
+const ctx = { appName: 'Food Truck IM', siteUrl: 'https://app.example.com' }
 
 Deno.test('escapes names so they cannot inject html', () => {
   assertEquals(escapeHtml('<b>"Tom\'s" & Co</b>'), '&lt;b&gt;&quot;Tom&#39;s&quot; &amp; Co&lt;/b&gt;')
@@ -39,7 +39,7 @@ Deno.test('unknown templates fail loudly', () => {
 })
 
 Deno.test('reads the from address', () => {
-  assertEquals(parseFrom('TruckStock <app@gmail.com>'), { name: 'TruckStock', email: 'app@gmail.com' })
+  assertEquals(parseFrom('Food Truck IM <app@gmail.com>'), { name: 'Food Truck IM', email: 'app@gmail.com' })
   assertEquals(parseFrom('app@gmail.com'), { email: 'app@gmail.com' })
 })
 

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Project rules for the truck inventory app. Read this first, every session. The full plan is in `docs/PLAN.md`.
+Project rules for Food Truck IM (Food Truck Inventory Management). Read this first, every session. The full plan is in `docs/PLAN.md`.
 
 ## Talking to the owner
 
@@ -169,3 +169,5 @@ Phases from `docs/PLAN.md`:
 8. Automation: built and tested locally (one 15 minute timer runs every job per business time zone: low stock, reminders, expiration, order lists with approval, morning email, daily, weekly, and monthly reports, par suggestions, pattern flags. Web Push with VAPID, photo cleanup, weekly encrypted backup).
 9. Extras: built and tested locally (reports with CSV: usage vs sales, waste, free drinks, drivers, count checks, sales minus costs; manager fixes to finished shifts with history; demo mode; user guide in docs/GUIDE.md).
 10. Square: waiting on the owner
+
+Added after: pictures on supplies (optional, shrunk to about 40 KB on the phone, shown on lists, counts, and loading).

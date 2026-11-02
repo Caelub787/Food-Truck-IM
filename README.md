@@ -1,4 +1,4 @@
-# TruckStock
+# Food Truck IM
 
 Inventory, shifts, and usage tracking for food truck businesses. A phone first web app (PWA) that any business can sign up for.
 

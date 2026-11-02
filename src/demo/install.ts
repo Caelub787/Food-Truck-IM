@@ -2,7 +2,7 @@
 import { demoSession, installDemo, resetDemo, switchUser, currentUser } from './server'
 
 installDemo()
-;(window as unknown as { __truckstockDemo: unknown }).__truckstockDemo = { switchUser, resetDemo, currentUser }
+;(window as unknown as { __foodTruckDemo: unknown }).__foodTruckDemo = { switchUser, resetDemo, currentUser }
 try {
   // Supabase reads the saved login from here when it starts.
   localStorage.setItem('sb-demo-auth-token', JSON.stringify(demoSession()))

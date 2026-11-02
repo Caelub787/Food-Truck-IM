@@ -1,6 +1,7 @@
 // Sample data for the demo: a made up shaved ice and coffee business with a
 // few trucks, people, supplies, recipes, past shifts, sales, plans, and an
 // order list. Times are relative to now so the demo always looks current.
+import { picturePath } from './pictures'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Row = Record<string, any>
@@ -60,7 +61,8 @@ export function seed(): Db {
       id, name, category, base_unit: base, count_unit_id: count ? `${id}-${count}` : null,
       purchase_unit_id: units.length > 1 ? `${id}-${units[units.length - 1]![0]}` : count ? `${id}-${count}` : null,
       supplier_id: null, truck_type_id: null, group_id: null, cost_per_base: 0, reorder_level: null, order_up_to: null, whole_only: false,
-      tracks_expiration: false, shelf_life_days: null, count_check: false, diff_percent: null, diff_min_qty: null, notes: null, active: true, ...extra,
+      tracks_expiration: false, shelf_life_days: null, count_check: false, diff_percent: null, diff_min_qty: null, notes: null, active: true,
+      photo_path: picturePath(DEMO_COMPANY, id), ...extra,
     })
     for (const [unit, factor] of units) supplyUnits.push({ id: `${id}-${unit}`, supply_id: id, name: unit, factor })
   }

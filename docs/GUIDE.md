@@ -1,11 +1,11 @@
-# Using TruckStock
+# Using Food Truck IM
 
 A short guide for admins, managers, and drivers. Want to click around first? Build the demo (`npm run build:demo`) or open the demo link you were sent.
 
 ## For the admin: first day
 
 1. **Business settings**: check your time zone, turn features on or off (scheduling, manager count checks, expiration tracking, loading checklist), pick who enters drink counts, and set the limits for flags.
-2. **Setup**: add your locations and trucks, then supplies (or use a starter kit, or import a spreadsheet). For each supply, set the units you count in and buy in, the cost, a reorder level and an "order up to" amount, and the supplier.
+2. **Setup**: add your locations and trucks, then supplies (or use a starter kit, or import a spreadsheet). For each supply, set the units you count in and buy in, the cost, a reorder level and an "order up to" amount, and the supplier. Add a picture too if you like (take one or pick one from your phone). It shows next to the supply on lists, counts, and the loading list, so drivers know exactly what to grab.
 3. **Products**: add what you sell, its sizes and prices, and a recipe for each size (what one drink uses). Add ons like oat milk can add or swap a supply.
 4. **Par levels** (Setup): how much each truck should leave with. Loading lists fill in from these. After a few weeks the app suggests better ones.
 5. **People**: invite managers and drivers by email. They get a link to set a password.

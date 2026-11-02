@@ -15,8 +15,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'TruckStock',
-        short_name: 'TruckStock',
+        name: 'Food Truck IM',
+        short_name: 'Food Truck IM',
         description: 'Inventory, shifts, and usage tracking for food trucks.',
         theme_color: '#0f766e',
         background_color: '#f8fafc',

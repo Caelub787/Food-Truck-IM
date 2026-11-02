@@ -1,11 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2 } from 'lucide-react'
+import { Camera, Plus, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { TextArea, Toggle } from '@/components/forms'
+import { SupplyPhoto } from '@/components/SupplyPhoto'
 import { Field, Notice, Select, Sheet } from '@/components/ui'
+import { useMeLoaded } from '@/features/auth/session'
 import { useSettings } from '@/features/settings/useSettings'
 import { deleteRow, num, updateRow } from '@/lib/data'
 import { refreshTables } from '@/lib/live'
+import { newPhotoPath, removePhotos, shrinkPhoto, SUPPLY_PHOTO, uploadPhoto, usePhotoUrl } from '@/lib/photos'
 import { rpc } from '@/lib/supabase'
 import { clean, findUnit, formatMoney } from '@/lib/units'
 import { useAction } from '@/lib/useAction'
@@ -23,6 +26,12 @@ export function SupplySheet({ supply, catalog, onClose }: { supply: Supply | nul
   const suppliers = useSuppliers()
   const types = useTruckTypes()
   const settings = useSettings()
+  const me = useMeLoaded()
+  // A new picture waiting to be saved, or 'remove'. Null keeps the one it has.
+  const [photo, setPhoto] = useState<{ dataUrl: string } | 'remove' | null>(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const savedPhoto = usePhotoUrl(supply?.photo_path)
+  const photoShown = photo === 'remove' ? null : (photo?.dataUrl ?? (supply?.photo_path ? savedPhoto.data : null))
   const existingUnits = supply ? catalog.unitsOf(supply.id) : []
   const countUnit = supply ? findUnit(existingUnits, supply.count_unit_id) : null
   const costUnit = supply ? findUnit(existingUnits, supply.purchase_unit_id ?? supply.count_unit_id) : null
@@ -87,7 +96,9 @@ export function SupplySheet({ supply, catalog, onClose }: { supply: Supply | nul
     }
     const cf = factorOf(form.count_unit)
     const cost = num(form.cost)
-    await rpc('save_supply', {
+    const newPhoto = photo && photo !== 'remove' ? newPhotoPath(me.company!.id, 'supplies') : null
+    if (newPhoto) await uploadPhoto(newPhoto, (photo as { dataUrl: string }).dataUrl)
+    const id = await rpc<string>('save_supply', {
       p: {
         id: supply?.id,
         name: form.name,
@@ -112,14 +123,30 @@ export function SupplySheet({ supply, catalog, onClose }: { supply: Supply | nul
         active: supply?.active ?? true,
       },
     })
+    if (photo) {
+      await updateRow('supplies', id, { photo_path: newPhoto })
+      await removePhotos([supply?.photo_path])
+    }
     await done()
   })
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file) return
+    setPhotoBusy(true)
+    try {
+      setPhoto({ dataUrl: await shrinkPhoto(file, SUPPLY_PHOTO) })
+    } catch {
+      save.setError("That picture couldn't be read. Try another one.")
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
   const toggle = useAction(async () => {
     await updateRow('supplies', supply!.id, { active: !supply!.active })
     await done()
   })
   const remove = useAction(async () => {
     await deleteRow('supplies', supply!.id)
+    await removePhotos([supply!.photo_path])
     await done()
   })
   const submit = (e: FormEvent) => {
@@ -133,6 +160,30 @@ export function SupplySheet({ supply, catalog, onClose }: { supply: Supply | nul
     <Sheet title={supply ? supply.name : 'Add a supply'} open onClose={onClose} wide>
       <form onSubmit={submit} className="flex flex-col gap-5">
         {error && <Notice tone="error">{error}</Notice>}
+
+        <section className="flex items-center gap-4">
+          <SupplyPhoto url={photoShown} size="lg" />
+          <div className="flex min-w-0 flex-col gap-1">
+            <h3 className="font-semibold">Picture (optional)</h3>
+            <p className="text-sm text-slate-500">Helps everyone spot it when counting and loading.</p>
+            <div className="flex flex-wrap gap-1">
+              <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 font-medium text-brand-700 hover:bg-brand-50">
+                <Camera className="size-5" aria-hidden />
+                {photoBusy ? 'Shrinking…' : photoShown ? 'Change picture' : 'Add a picture'}
+                <input type="file" accept="image/*" className="sr-only" onChange={(e) => void pickPhoto(e.target.files?.[0])} />
+              </label>
+              {photoShown && (
+                <button
+                  type="button"
+                  onClick={() => setPhoto(supply?.photo_path ? 'remove' : null)}
+                  className="min-h-11 rounded-lg px-2 font-medium text-slate-600 hover:bg-red-50 hover:text-red-600"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
 
         <section className="grid gap-4 sm:grid-cols-2">
           <Field label="Name" required autoFocus={!supply} value={form.name} onChange={set('name')} className="sm:col-span-2" />

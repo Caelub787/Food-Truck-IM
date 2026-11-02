@@ -79,6 +79,14 @@ async function mockSupabase(page, state) {
     }
     if (p === '/functions/v1/manage-invite') return json(route, { ok: true, action: 'invite' })
     // Photo storage: uploads, signed links, and the photo itself.
+    if (p === '/storage/v1/object/sign/photos' && req.method() === 'POST') {
+      const { paths } = req.postDataJSON()
+      return json(route, paths.map((path) => ({ path, error: null, signedURL: `/object/sign/photos/${path}?token=t` })))
+    }
+    if (p === '/storage/v1/object/photos' && req.method() === 'DELETE') {
+      state.removed = [...(state.removed ?? []), ...req.postDataJSON().prefixes]
+      return json(route, [])
+    }
     if (p.startsWith('/storage/v1/object/sign/')) {
       if (req.method() === 'GET') return route.fulfill({ status: 200, headers: { ...cors, 'Content-Type': 'image/png' }, body: Buffer.from(PNG, 'base64') })
       return json(route, { signedURL: `${p.slice('/storage/v1'.length)}?token=t` })
@@ -309,10 +317,24 @@ async function runSetup(browser, size, label) {
   await assertNoReload(page, 'new supply')
   checks.push('supplies list updates live')
 
+  // Add a picture to a supply. Once saved, it shows in the list.
+  state.rpcs.save_supply = (args) => args.p.id
+  const patches = []
+  page.on('request', (r) => r.method() === 'PATCH' && r.url().includes('/rest/v1/supplies') && patches.push(r.postDataJSON()))
   await seen('Whole milk').click()
   await page.getByRole('heading', { name: 'Whole milk' }).waitFor()
+  await page.locator('input[type=file]').setInputFiles({ name: 'milk.png', mimeType: 'image/png', buffer: Buffer.from(PNG, 'base64') })
+  await seen('Change picture').waitFor()
   await shot('22-supply-editor')
-  await page.getByRole('button', { name: 'Close' }).last().click()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByRole('heading', { name: 'Whole milk' }).waitFor({ state: 'detached' })
+  const photoPath = patches.find((x) => x.photo_path)?.photo_path ?? ''
+  if (!photoPath.startsWith('c1/supplies/') || !(state.uploads ?? []).includes(photoPath)) throw new Error(`supply picture not saved: ${photoPath}`)
+  state.tables.supplies.find((x) => x.id === 's-milk').photo_path = photoPath
+  live.signal('company:c1', 'supplies')
+  await page.locator('button, tr').filter({ hasText: 'Whole milk', visible: true }).locator('img').first().waitFor({ timeout: 3000 })
+  await shot('22b-supplies-with-picture')
+  checks.push('supplies get a picture that shows in the list')
 
   await page.goto(`${base}/setup/products`)
   await seen('Latte').waitFor()

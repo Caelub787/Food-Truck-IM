@@ -126,6 +126,23 @@ describe('supplies and units', () => {
       as(c.admin, (q) => q(`update public.supplies set count_unit_id = $1 where id = $2`, [jug.id, cups.id])),
     ).rejects.toThrow(/foreign key/)
   })
+
+  it('keeps supply pictures in the business folder, set by admins and managers', async () => {
+    const c = await createCompany()
+    const other = await createCompany()
+    const manager = await addMember(c.id, 'manager')
+    const driver = await addMember(c.id, 'driver')
+    const cups = await insertAs(c.admin, 'supplies', { name: 'Cups' })
+    const setPhoto = (who: User, path: string) =>
+      as(who, (q) => q(`update public.supplies set photo_path = $1 where id = $2 returning id`, [path, cups.id]))
+
+    await expect(setPhoto(c.admin, `${other.id}/supplies/a.jpg`)).rejects.toThrow(/check constraint/)
+    expect(await setPhoto(manager, `${c.id}/supplies/a.jpg`)).toHaveLength(1)
+    expect(await setPhoto(driver, `${c.id}/supplies/b.jpg`)).toHaveLength(0)
+    expect(await setPhoto(other.admin, `${other.id}/supplies/b.jpg`)).toHaveLength(0)
+    const [row] = await as(driver, (q) => q(`select photo_path from public.supplies where id = $1`, [cups.id]))
+    expect(row).toEqual({ photo_path: `${c.id}/supplies/a.jpg` })
+  })
 })
 
 async function latteSetup() {

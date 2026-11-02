@@ -1,4 +1,4 @@
-# Setting up TruckStock (free)
+# Setting up Food Truck IM (free)
 
 This gets the app live on free plans. It takes about 45 minutes the first time. You only do it once.
 
@@ -25,7 +25,7 @@ Keep a note open while you work. You'll copy a few values into it as you go:
 ## Step 1: Supabase
 
 1. Go to supabase.com and sign up (signing in with GitHub is easiest).
-2. Create a new project. Name it `TruckStock`. Pick a strong database password and save it in your note. Pick the region closest to you. Keep the Free plan.
+2. Create a new project. Name it `Food Truck IM`. Pick a strong database password and save it in your note. Pick the region closest to you. Keep the Free plan.
 3. When the project is ready, open **Project Settings**:
    * **Data API** (or **API**): copy the **Project URL**, like `https://abcd1234.supabase.co`. The part before `.supabase.co` (`abcd1234`) is your **Project ID**.
    * **API Keys**: copy the **publishable** key (it may be called the **anon public** key). This one is safe to put in the app.
@@ -36,7 +36,7 @@ Keep a note open while you work. You'll copy a few values into it as you go:
 
 1. Make a new Gmail account just for the app, like `truckstockapp@gmail.com`. Emails from the app will come from this address.
 2. In that account, go to myaccount.google.com, then **Security**, and turn on **2 Step Verification**.
-3. Then search the account settings for **App passwords**. Create one called `TruckStock`. Google shows a 16 letter password once. Save it in your note (no spaces).
+3. Then search the account settings for **App passwords**. Create one called `Food Truck IM`. Google shows a 16 letter password once. Save it in your note (no spaces).
 
 ## Step 3: Cloudflare (hosts the app)
 
@@ -65,7 +65,7 @@ In your Supabase project:
    * **Email OTP Expiration**: `86400` (that's 24 hours, so invite links don't expire too fast)
 3. **Authentication**, then **Emails**, then **SMTP Settings**: turn on custom SMTP.
    * Sender email: your Gmail address
-   * Sender name: `TruckStock`
+   * Sender name: `Food Truck IM`
    * Host: `smtp.gmail.com`
    * Port: `465`
    * Username: your Gmail address
@@ -84,7 +84,7 @@ In your Supabase project:
    | Name | Value |
    |---|---|
    | `SITE_URL` | your App address |
-   | `EMAIL_FROM` | `TruckStock <your Gmail address>` |
+   | `EMAIL_FROM` | `Food Truck IM <your Gmail address>` |
    | `SMTP_USER` | your Gmail address |
    | `SMTP_PASS` | your Gmail app password |
    | `CRON_SECRET` | make up a long random password (at least 30 letters and numbers) and save it in your note |

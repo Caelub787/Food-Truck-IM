@@ -1,7 +1,7 @@
 // Cloudflare settings, used if the app is set up as a Worker with static files
 // (Cloudflare's newer setup). Cloudflare Pages ignores this file.
 {
-  "name": "truckstock",
+  "name": "food-truck-im",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",

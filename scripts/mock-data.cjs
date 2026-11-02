@@ -55,7 +55,7 @@ function setupTables() {
     t.supplies.push({
       id, name, category, base_unit: base, count_unit_id: count ? `${id}-${count}` : null, purchase_unit_id: units.length > 1 ? `${id}-${units[units.length - 1][0]}` : null,
       supplier_id: null, truck_type_id: null, group_id: null, cost_per_base: 0, reorder_level: null, order_up_to: null, whole_only: false,
-      tracks_expiration: false, shelf_life_days: null, count_check: false, diff_percent: null, diff_min_qty: null, notes: null, active: true, ...extra,
+      tracks_expiration: false, shelf_life_days: null, count_check: false, diff_percent: null, diff_min_qty: null, notes: null, active: true, photo_path: null, ...extra,
     })
     for (const [unit, factor] of units) t.supply_units.push({ id: `${id}-${unit}`, supply_id: id, name: unit, factor })
   }
@@ -64,7 +64,7 @@ function setupTables() {
   supply('s-beans', 'Espresso beans', 'Coffee', 'g', [['shot', 9], ['bag', 2268]], 'bag', { cost_per_base: 0.024, truck_type_id: 'tt-coffee' })
   supply('s-cherry', 'Cherry syrup', 'Syrup', 'oz', [['gallon', 128], ['case', 512]], 'gallon', { group_id: 'grp-syrup', cost_per_base: 0.117, truck_type_id: 'tt-ice' })
   supply('s-blue', 'Blue raspberry syrup', 'Syrup', 'oz', [['gallon', 128], ['case', 512]], 'gallon', { group_id: 'grp-syrup', cost_per_base: 0.117, truck_type_id: 'tt-ice' })
-  supply('s-cup-s', 'Small shaved ice cup', 'Cups', 'each', [['sleeve', 50], ['case', 1000]], 'sleeve', { supplier_id: 'sup-2', cost_per_base: 0.045, count_check: true, reorder_level: 500, truck_type_id: 'tt-ice' })
+  supply('s-cup-s', 'Small shaved ice cup', 'Cups', 'each', [['sleeve', 50], ['case', 1000]], 'sleeve', { supplier_id: 'sup-2', cost_per_base: 0.045, count_check: true, reorder_level: 500, truck_type_id: 'tt-ice', photo_path: 'c1/supplies/cup.jpg' })
   supply('s-cup-l', 'Large shaved ice cup', 'Cups', 'each', [['sleeve', 50], ['case', 1000]], 'sleeve', { supplier_id: 'sup-2', cost_per_base: 0.06, count_check: true, truck_type_id: 'tt-ice' })
   supply('s-ice', 'Ice', 'Ice', 'lb', [['bag', 10]], 'bag', { cost_per_base: 0.3, truck_type_id: 'tt-ice' })
 

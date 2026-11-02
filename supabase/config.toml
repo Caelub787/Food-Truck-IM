@@ -1,5 +1,5 @@
 # Supabase CLI settings. Used for local development and deploys.
-project_id = "truckstock"
+project_id = "food-truck-im"
 
 [api]
 schemas = ["public"]

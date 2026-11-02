@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     }
     const admin = adminClient()
     const ctx = {
-      appName: Deno.env.get('APP_NAME') ?? 'TruckStock',
+      appName: Deno.env.get('APP_NAME') ?? 'Food Truck IM',
       siteUrl: requireEnv('SITE_URL').replace(/\/$/, ''),
     }
 

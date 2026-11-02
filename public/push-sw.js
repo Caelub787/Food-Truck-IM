@@ -5,10 +5,10 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {}
   } catch {
-    data = { title: 'TruckStock', body: event.data ? event.data.text() : '' }
+    data = { title: 'Food Truck IM', body: event.data ? event.data.text() : '' }
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || 'TruckStock', {
+    self.registration.showNotification(data.title || 'Food Truck IM', {
       body: data.body || '',
       icon: '/pwa-192.png',
       badge: '/pwa-192.png',

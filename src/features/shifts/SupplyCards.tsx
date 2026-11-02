@@ -2,8 +2,10 @@ import { Plus } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { CountInput } from '@/components/CountInput'
 import { SearchBox } from '@/components/forms'
+import { SupplyPhoto } from '@/components/SupplyPhoto'
 import { Card } from '@/components/ui'
 import type { Catalog, Supply } from '@/features/setup/data'
+import { useSupplyPhotos } from '@/lib/photos'
 import { matchesSearch } from '@/lib/search'
 import { findUnit } from '@/lib/units'
 
@@ -36,6 +38,7 @@ export function SupplyCards({
   onAdd?: (supplyId: string) => void
 }) {
   const [search, setSearch] = useState('')
+  const photo = useSupplyPhotos(c.supplies)
   const shown = supplies.filter((s) => matchesSearch(search, s.name, s.category))
 
   return (
@@ -52,9 +55,12 @@ export function SupplyCards({
           return (
             <Card key={s.id} className={highlight?.(s) ? 'ring-2 ring-amber-200' : ''}>
               <div className="mb-2 flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-semibold">{s.name}</p>
-                  {info && <div className="text-sm text-slate-500">{info(s)}</div>}
+                <div className="flex min-w-0 items-center gap-3">
+                  {photo && <SupplyPhoto url={photo(s)} size="md" />}
+                  <div className="min-w-0">
+                    <p className="font-semibold">{s.name}</p>
+                    {info && <div className="text-sm text-slate-500">{info(s)}</div>}
+                  </div>
                 </div>
                 {badge?.(s)}
               </div>

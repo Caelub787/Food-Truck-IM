@@ -1,9 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { CountInput } from '@/components/CountInput'
+import { SupplyPhoto } from '@/components/SupplyPhoto'
 import { Badge, Button, Field, Notice, Select, Sheet } from '@/components/ui'
 import { useSupplyCatalog } from '@/features/setup/data'
 import { refreshTables } from '@/lib/live'
+import { usePhotoUrl } from '@/lib/photos'
 import { rpc } from '@/lib/supabase'
 import { findUnit, formatAmount } from '@/lib/units'
 import { useAction } from '@/lib/useAction'
@@ -19,6 +21,7 @@ export function SupplyStockSheet({ supplyId, placeId, onClose }: { supplyId: str
   const moves = useMovements({ supplyId, limit: 20 })
   const who = usePeopleNames()
   const supply = catalog.data?.supply(supplyId)
+  const photo = usePhotoUrl(supply?.photo_path)
   const units = catalog.data?.unitsOf(supplyId) ?? []
   const unit = findUnit(units, supply?.count_unit_id)
   const [adjust, setAdjust] = useState<{ amount: number | null; direction: 'add' | 'remove'; reason: string }>({ amount: null, direction: 'remove', reason: '' })
@@ -50,6 +53,7 @@ export function SupplyStockSheet({ supplyId, placeId, onClose }: { supplyId: str
   return (
     <Sheet title={supply.name} open onClose={onClose} wide>
       <div className="flex flex-col gap-5">
+        {supply.photo_path && <SupplyPhoto url={photo.data} size="lg" />}
         <section>
           <h3 className="font-semibold">Where it is</h3>
           {where.length === 0 && <p className="text-sm text-slate-500">None anywhere right now.</p>}

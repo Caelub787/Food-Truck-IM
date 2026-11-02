@@ -13,6 +13,7 @@ export function ResponsiveList<T>({
   rowKey,
   title,
   subtitle,
+  leading,
   badge,
   columns,
   onSelect,
@@ -23,6 +24,8 @@ export function ResponsiveList<T>({
   rowKey: (row: T) => string
   title: (row: T) => ReactNode
   subtitle?: (row: T) => ReactNode
+  /** Shown before the title on phones and in the first column on desktop, like a picture. */
+  leading?: (row: T) => ReactNode
   badge?: (row: T) => ReactNode
   columns: Column<T>[]
   onSelect?: (row: T) => void
@@ -35,6 +38,7 @@ export function ResponsiveList<T>({
         {rows.map((row) => {
           const content = (
             <>
+              {leading?.(row)}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{title(row)}</p>
                 {subtitle && <div className="truncate text-sm text-slate-500">{subtitle(row)}</div>}
@@ -81,9 +85,16 @@ export function ResponsiveList<T>({
                   onClick={onSelect ? () => onSelect(row) : undefined}
                   className={`${onSelect ? 'cursor-pointer hover:bg-slate-50' : ''} transition ${dimmed?.(row) ? 'text-slate-400' : ''}`}
                 >
-                  {columns.map((c) => (
+                  {columns.map((c, i) => (
                     <td key={c.label} className={`px-4 py-3 ${c.className ?? ''}`}>
-                      {c.cell(row)}
+                      {i === 0 && leading ? (
+                        <div className="flex items-center gap-3">
+                          {leading(row)}
+                          {c.cell(row)}
+                        </div>
+                      ) : (
+                        c.cell(row)
+                      )}
                     </td>
                   ))}
                   {onSelect && (

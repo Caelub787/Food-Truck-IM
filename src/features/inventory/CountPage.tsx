@@ -3,10 +3,12 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { CountInput } from '@/components/CountInput'
 import { SearchBox, Toggle } from '@/components/forms'
+import { SupplyPhoto } from '@/components/SupplyPhoto'
 import { Button, Card, Notice, PageHeader, Select, Spinner } from '@/components/ui'
 import { BackLink } from '@/features/setup/BackLink'
 import { useSupplyCatalog, useTrucks } from '@/features/setup/data'
 import { refreshTables } from '@/lib/live'
+import { useSupplyPhotos } from '@/lib/photos'
 import { matchesSearch } from '@/lib/search'
 import { rpc } from '@/lib/supabase'
 import { findUnit, formatAmount } from '@/lib/units'
@@ -25,6 +27,7 @@ export function CountPage() {
   const [showExpected, setShowExpected] = useState(true)
   const [search, setSearch] = useState('')
   const [done, setDone] = useState<string | null>(null)
+  const photo = useSupplyPhotos(catalog.data?.supplies)
 
   const active = (places.data ?? []).filter((p) => p.active)
   const placeId = params.get('place') || active[0]?.id || ''
@@ -101,9 +104,12 @@ export function CountPage() {
           return (
             <Card key={s.id} className={value !== null ? 'ring-2 ring-brand-100' : ''}>
               <div className="mb-2 flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold">{s.name}</p>
-                  {showExpected && <p className="text-sm text-slate-500">App has {formatAmount(expected, unit)}</p>}
+                <div className="flex min-w-0 items-center gap-3">
+                  {photo && <SupplyPhoto url={photo(s)} size="md" />}
+                  <div className="min-w-0">
+                    <p className="font-semibold">{s.name}</p>
+                    {showExpected && <p className="text-sm text-slate-500">App has {formatAmount(expected, unit)}</p>}
+                  </div>
                 </div>
                 {diff !== null && Math.abs(diff) > 0.0001 && showExpected && (
                   <span className={`text-sm font-semibold ${diff < 0 ? 'text-red-600' : 'text-emerald-700'}`}>

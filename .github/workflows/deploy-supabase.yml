@@ -1,18 +1,18 @@
 name: Deploy database and server functions
 
 # Runs when you press "Run workflow" in the Actions tab, and on every push to
-# main that changes the supabase folder. Needs three repository secrets, see
-# docs/SETUP.md. Without them it does nothing.
+# the repository's default branch that changes the supabase folder. Needs three
+# repository secrets, see docs/SETUP.md. Without them it does nothing.
 on:
   workflow_dispatch:
   push:
-    branches: [main]
     paths: ['supabase/**']
 
 concurrency: deploy-supabase
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

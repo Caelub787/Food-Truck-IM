@@ -2,7 +2,9 @@ import { Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { EmptyState, SearchBox } from '@/components/forms'
 import { ResponsiveList } from '@/components/ResponsiveList'
+import { SupplyPhoto } from '@/components/SupplyPhoto'
 import { Badge, Button, PageHeader, Select, Spinner } from '@/components/ui'
+import { useSupplyPhotos } from '@/lib/photos'
 import { matchesSearch } from '@/lib/search'
 import { findUnit, formatAmount, formatMoney } from '@/lib/units'
 import { BackLink } from './BackLink'
@@ -15,6 +17,7 @@ export function SuppliesPage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  const photo = useSupplyPhotos(catalog.data?.supplies)
 
   const categories = useMemo(
     () => [...new Set((catalog.data?.supplies ?? []).map((s) => s.category).filter(Boolean) as string[])].sort(),
@@ -74,6 +77,7 @@ export function SuppliesPage() {
           rowKey={(s) => s.id}
           title={(s) => s.name}
           subtitle={(s) => [s.category, `Counted in ${countLabel(s.id)}`, costLabel(s.id)].filter(Boolean).join(' · ')}
+          leading={photo && ((s) => <SupplyPhoto url={photo(s)} />)}
           badge={(s) => !s.active && <Badge>Off</Badge>}
           dimmed={(s) => !s.active}
           onSelect={(s) => setEditing(s.id)}
