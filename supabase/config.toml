@@ -37,9 +37,14 @@ content_path = "./supabase/templates/recovery.html"
 subject = "Confirm your new email"
 content_path = "./supabase/templates/email_change.html"
 
+# Each function checks who is calling itself: manage-invite asks Supabase Auth
+# about the caller's login, and the timer ones need the shared cron secret.
+# (The older built in login check doesn't work with Supabase's newer keys.)
 [functions.manage-invite]
-verify_jwt = true
+verify_jwt = false
 
-# Called by Supabase Cron with a shared secret instead of a login.
 [functions.send-outbox]
+verify_jwt = false
+
+[functions.cleanup-photos]
 verify_jwt = false

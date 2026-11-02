@@ -30,17 +30,18 @@ jobs:
           fi
       - uses: actions/checkout@v4
         if: steps.check.outputs.ready == 'true'
+      # Pinned: version 3 of the Supabase tool changed what these commands do.
       - uses: supabase/setup-cli@v1
         if: steps.check.outputs.ready == 'true'
         with:
-          version: latest
+          version: 2.122.1
       - name: Dump the database
         if: steps.check.outputs.ready == 'true'
         run: |
           supabase link --project-ref "$PROJECT_REF"
           mkdir backup
-          supabase db dump -f backup/schema.sql
-          supabase db dump --data-only -f backup/data.sql
+          supabase db dump --linked -f backup/schema.sql
+          supabase db dump --linked --data-only -f backup/data.sql
           tar czf backup.tar.gz backup
           gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" --symmetric --cipher-algo AES256 -o backup.tar.gz.gpg backup.tar.gz
           rm -rf backup backup.tar.gz

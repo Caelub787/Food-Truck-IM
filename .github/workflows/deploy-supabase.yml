@@ -30,16 +30,17 @@ jobs:
           fi
       - uses: actions/checkout@v4
         if: steps.check.outputs.ready == 'true'
+      # Pinned: version 3 of the Supabase tool changed what these commands do.
       - uses: supabase/setup-cli@v1
         if: steps.check.outputs.ready == 'true'
         with:
-          version: latest
+          version: 2.122.1
       - name: Link the project
         if: steps.check.outputs.ready == 'true'
         run: supabase link --project-ref "$PROJECT_REF"
       - name: Update the database
         if: steps.check.outputs.ready == 'true'
-        run: supabase db push
+        run: supabase db push --linked --yes
       - name: Deploy server functions
         if: steps.check.outputs.ready == 'true'
-        run: supabase functions deploy --project-ref "$PROJECT_REF"
+        run: supabase functions deploy --project-ref "$PROJECT_REF" --yes
