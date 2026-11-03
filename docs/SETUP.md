@@ -1,13 +1,20 @@
 # Setting up Food Truck IM (free)
 
-This puts Food Truck IM online on free plans. Plan on about an hour the first time. You only do it once. A computer is easier than a phone for this.
+This puts Food Truck IM online at your own domain, on free plans. Plan on about an hour and a half the first time, plus some waiting while the domain switches over. You only do it once. A computer is easier than a phone for this.
 
-You'll use four free accounts. None of them need a credit card:
+When it's done:
 
-1. **GitHub** (you already have it): holds the app's code, updates the database, and makes weekly backups.
-2. **Gmail**: a new Gmail account just for the app. It sends the app's emails.
-3. **Supabase**: the database, logins, photos, live updates, and the server code.
-4. **Cloudflare**: puts the app on the internet and gives you its address.
+* **foodtruckim.com** is your website. It explains the app and has the demo at foodtruckim.com/demo.
+* **app.foodtruckim.com** is the app itself, where people sign up and log in.
+* App emails come from **noreply@foodtruckim.com**, and replies go to your GoDaddy inbox.
+
+You'll use these accounts. Everything except GoDaddy is free, with no credit card:
+
+1. **GoDaddy** (you have it): your domain and your email inbox. They stay at GoDaddy.
+2. **GitHub** (you have it): holds the app's code, sets up the database, and makes weekly backups.
+3. **Cloudflare**: runs your domain's settings (DNS) and puts the website and app online.
+4. **Resend**: sends the app's emails from your domain. Free for 100 emails a day.
+5. **Supabase**: the database, logins, pictures, and live updates.
 
 Screens in these services change now and then. If a button has a slightly different name, look for the closest match.
 
@@ -19,32 +26,56 @@ Open a note on your computer (a password manager is best) and keep these as you 
 
 | What | Where it comes from | Where it goes |
 |---|---|---|
-| Gmail address | Step 1 | Supabase |
-| Gmail app password | Step 1 | Supabase |
-| Database password | Step 2 | GitHub |
-| Project URL | Step 2 | Cloudflare, SQL step |
-| Publishable key | Step 2 | Cloudflare |
-| Project ID | Step 2 | GitHub |
-| Access token | Step 2 | GitHub |
-| Backup passphrase | Step 3 (you make it up) | GitHub |
-| App address | Step 4 | Supabase |
-| Cron secret | Step 6 (you make it up) | Supabase, SQL step |
-| Push keys | Step 9 (the app makes them) | Supabase, Cloudflare |
+| Your inbox address | Your GoDaddy email (like you@foodtruckim.com) | Supabase |
+| Resend API key | Step 2 | Supabase (twice) |
+| Database password | Step 3 | GitHub |
+| Project URL | Step 3 | Cloudflare, SQL step |
+| Publishable key | Step 3 | Cloudflare |
+| Project ID | Step 3 | GitHub |
+| Access token | Step 3 | GitHub |
+| Backup passphrase | Step 4 (you make it up) | GitHub |
+| Cron secret | Step 8 (you make it up) | Supabase, SQL step |
+| Push keys | Step 11 (the app makes them) | Supabase, Cloudflare |
 
 When this guide says "make up a long password", use only letters and numbers (no symbols), at least 30 of them. Your password manager's "generate password" button works if you turn symbols off.
 
-## Step 1: A Gmail account for the app (10 minutes)
+## Step 1: Let Cloudflare run your domain's settings (20 minutes, then some waiting)
 
-1. Go to **accounts.google.com/signup** and make a new Gmail account just for the app, like `foodtruckim@gmail.com` (pick whatever is free). The app's emails come from this address, so pick a name your people will recognize. Save the address in your note.
-2. While logged in to that new account, go to **myaccount.google.com**, then **Security** (it may say **Security & sign in**).
-3. Find **2 Step Verification** and turn it on. Google walks you through it with your phone number.
-4. Now go to **myaccount.google.com/apppasswords**.
-5. Under **App name**, type `Food Truck IM` and press **Create**.
-6. Google shows a password of 16 letters in a yellow box. Copy it into your note **without the spaces**. Google only shows it once. Press **Done**.
+Your domain stays registered at GoDaddy and you keep paying GoDaddy for it like before. You're only moving its settings (called DNS) to Cloudflare, which is free and makes the rest of this setup much easier. Your GoDaddy email keeps working as long as its records come along, which this step checks.
 
-If the App passwords page says the setting isn't available, 2 Step Verification isn't finished yet. Go back to Security and check it says On.
+1. **Make a backup of your current settings.** Log in to GoDaddy, open **My Products** (or **Domain Portfolio**), click **foodtruckim.com**, then **DNS**. Take screenshots of the whole list of records (scroll to see them all). Pay attention to the ones for email: type **MX**, type **TXT** that start with `v=spf1`, and type **CNAME** with names like `email`, `autodiscover`, or ones pointing to `secureserver.net` or `outlook.com`.
+2. **Check DNSSEC is off.** In GoDaddy, on the domain's page, look for **DNSSEC** (often under **Domain settings** or the DNS page). It's usually off. If it's on, turn it off and wait one full day before doing number 7 below.
+3. Go to **dash.cloudflare.com** and make an account. Confirm your email.
+4. In Cloudflare, press **Add a domain** (it may say **Onboard a domain** or **Add a site**). Type `foodtruckim.com`, keep **Quick scan for DNS records** picked, and press **Continue**.
+5. Pick the **Free** plan and press **Continue**.
+6. **Compare the records.** Cloudflare shows the records it found. Check them against your GoDaddy screenshots. Every MX, TXT, and CNAME from GoDaddy should be in the list. If one is missing, press **Add record** and copy it in exactly (Type, Name, and Content, plus Priority for MX).
+   * Any record for email (names like `email`, `mail`, `autodiscover`, `msoid`, `lyncdiscover`, `sip`, `enterpriseregistration`, `enterpriseenrollment`, or anything pointing to `secureserver.net`, `outlook.com`, or `office.com`) must show a **grey cloud** that says **DNS only**. If it shows an orange cloud, press **Edit** and switch it to DNS only, then **Save**.
+   * Leave everything else as it is for now. Then press **Continue to activation** (or **Continue**).
+7. Cloudflare shows **two nameservers**, like `ada.ns.cloudflare.com` and `bob.ns.cloudflare.com`. Keep that page open.
+8. In GoDaddy, on the domain's **DNS** page, click the **Nameservers** tab, then **Change Nameservers**. Pick **I'll use my own nameservers** (it may say **Enter my own nameservers**). Type in the two from Cloudflare, one per box, and press **Save**. GoDaddy warns you that its DNS settings will stop being used. That's expected, since Cloudflare has them now. Confirm.
+9. Back in Cloudflare, press **Check nameservers now** (or **Done, check nameservers**). It can take a few minutes to a day, usually under an hour. Cloudflare emails you when foodtruckim.com is **Active**.
 
-## Step 2: Supabase (10 minutes)
+**While you wait, do Steps 3 and 4.** They don't need the domain.
+
+10. Once Cloudflare says Active, test your email: send a message to your GoDaddy inbox from another email account, then reply from your GoDaddy inbox. If it doesn't arrive, compare Cloudflare's records with your screenshots again and add what's missing.
+
+## Step 2: Resend, for the app's emails (10 minutes, after Step 1 says Active)
+
+1. Go to **resend.com** and sign up (signing in with GitHub works).
+2. Click **Domains**, then **Add Domain**. Type `foodtruckim.com`, leave the region as it is, and press **Add**.
+3. Resend shows a few DNS records to add (usually an MX and a TXT named `send`, and a TXT named `resend._domainkey`).
+   * If you see a **Sign in to Cloudflare** button (it may say **Auto configure**), press it and approve. Resend adds the records for you.
+   * If not, add them by hand: in Cloudflare, open **foodtruckim.com**, then **DNS**, then **Records**, then **Add record**. For each one, copy the Type, Name, and Value (and Priority if it has one) exactly from Resend. In the Name box, type only what Resend shows (like `send`). Cloudflare adds the rest. If there's a proxy switch, set it to **DNS only**.
+   * If Resend also lists a **DMARC** record (named `_dmarc`) and your Cloudflare list doesn't already have a `_dmarc` record, add that one too. If you already have one, leave yours.
+4. Back in Resend, press **Verify DNS Records**. It usually takes a few minutes. The domain turns **Verified** when it's done.
+5. Click the domain and make sure **Click tracking** and **Open tracking** are off (they are at first). Click tracking would break the login links in emails.
+6. Click **API Keys**, then **Create API Key**:
+   * Name: `Food Truck IM`
+   * Permission: **Sending access**
+   * Domain: `foodtruckim.com`
+   * Press **Add**, then copy the key (it starts with `re_`) into your note. It's only shown once.
+
+## Step 3: Supabase (10 minutes)
 
 1. Go to **supabase.com** and press **Start your project**. Sign up with **Continue with GitHub** (easiest).
 2. If it asks you to make an organization, name it anything (like your business name) and pick the **Free** plan.
@@ -63,7 +94,7 @@ If the App passwords page says the setting isn't available, 2 Step Verification 
    3. If it asks what the token can do, give it full access. If it shows a list instead, set everything to the most access it offers.
    4. Copy the token into your note. It's only shown once.
 
-## Step 3: Let GitHub set up the database (10 minutes)
+## Step 4: Let GitHub set up the database (10 minutes)
 
 1. Open **github.com/Caelub787/Food-Truck-IM** and click **Settings** (the gear tab at the top of the repository).
 2. In the left menu, under **Security**, click **Secrets and variables**, then **Actions**.
@@ -85,16 +116,15 @@ If you get a red X instead, click it, then click the red step to see what went w
 
 From now on, every time the app's database code changes on GitHub, this runs by itself.
 
-## Step 4: Cloudflare (10 minutes)
+## Step 5: Put the app online at app.foodtruckim.com (10 minutes)
 
-1. Go to **dash.cloudflare.com/sign-up** and make an account. Confirm your email.
-2. In the left menu, open **Compute & AI** or **Workers & Pages** (whichever you see), then **Workers & Pages**.
-3. Press **Create application**. Cloudflare opens the Workers screen first. Look for the **Pages** tab (or a link like "Looking to deploy Pages? Get started") and click it.
-4. Press **Connect to Git** (it may say **Import an existing Git repository**), pick **GitHub**, and press **Install & Authorize**. When GitHub asks which repositories, pick **Only select repositories**, choose `Food-Truck-IM`, and approve.
-5. Back in Cloudflare, pick `Food-Truck-IM` and press **Begin setup**.
-6. On **Set up builds and deployments**:
-   * **Project name**: `foodtruckim`. This becomes your address, `https://foodtruckim.pages.dev`. If it's taken, Cloudflare tells you; add something like your town.
-   * **Production branch**: `ccr-ee84e127-hvai58` (it's the only one).
+1. In Cloudflare, open **Workers & Pages** in the left menu (it may be inside **Compute & AI**).
+2. Press **Create application**. Cloudflare opens the Workers screen first. Look for the **Pages** tab (or a link like "Looking to deploy Pages? Get started") and click it.
+3. Press **Connect to Git** (it may say **Import an existing Git repository**), pick **GitHub**, and press **Install & Authorize**. When GitHub asks which repositories, pick **Only select repositories**, choose `Food-Truck-IM`, and approve.
+4. Back in Cloudflare, pick `Food-Truck-IM` and press **Begin setup**.
+5. On **Set up builds and deployments**:
+   * **Project name**: `foodtruckimapp`
+   * **Production branch**: `ccr-ee84e127-hvai58` (it's the only one)
    * **Framework preset**: None
    * **Build command**: `npm run build`
    * **Build output directory**: `dist`
@@ -105,80 +135,95 @@ From now on, every time the app's database code changes on GitHub, this runs by 
      | `VITE_SUPABASE_URL` | your Project URL |
      | `VITE_SUPABASE_PUBLISHABLE_KEY` | your Publishable key |
 
-7. Press **Save and Deploy**. It takes 2 or 3 minutes. When it says it's done, press **Continue to project**.
-8. Your app's address is shown at the top, like `https://foodtruckim.pages.dev`. That's your **App address**. Save it in your note. (If you open it now, it works, but logins won't email until Step 5 is done.)
+6. Press **Save and Deploy**. It takes 2 or 3 minutes. When it's done, press **Continue to project**.
+7. Click the **Custom domains** tab, then **Set up a custom domain**. Type `app.foodtruckim.com`, press **Continue**, then **Activate domain**. After a few minutes it says **Active**.
+8. Open **https://app.foodtruckim.com**. You should see the Food Truck IM login page. (Logging in won't work until Steps 7 to 9 are done.)
 
-From now on, every time new code goes up on GitHub, Cloudflare rebuilds the app on its own.
+## Step 6: Put the website online at foodtruckim.com (10 minutes)
 
-## Step 5: Supabase login and email settings (15 minutes)
+1. **Clear the old parking page.** In Cloudflare, open **foodtruckim.com**, then **DNS**, then **Records**. If there's an **A** record named `foodtruckim.com` (or `@`), or a record named `www`, they point to GoDaddy's old parking page. Delete them (press **Edit**, then **Delete**). **Don't delete** any MX or TXT records, or anything for email.
+2. Go back to **Workers & Pages**, press **Create application**, then the **Pages** tab, then **Connect to Git**, and pick `Food-Truck-IM` again. Press **Begin setup**.
+3. On **Set up builds and deployments**:
+   * **Project name**: `foodtruckim`
+   * **Production branch**: `ccr-ee84e127-hvai58`
+   * **Framework preset**: None
+   * **Build command**: `npm run build:site`
+   * **Build output directory**: `dist-site`
+   * No environment variables needed.
+4. Press **Save and Deploy**, wait for it to finish, then press **Continue to project**.
+5. Click **Custom domains**, then **Set up a custom domain**. Type `foodtruckim.com`, press **Continue**, then **Activate domain**.
+6. Do it once more for `www.foodtruckim.com`.
+7. After a few minutes, open **https://foodtruckim.com**. You should see the website. Try **Try the demo** too.
+
+From now on, every time new code goes up on GitHub, Cloudflare rebuilds the website and the app on its own.
+
+## Step 7: Supabase login and email settings (15 minutes)
 
 All of this is in your Supabase project, in the left menu under **Authentication**.
 
 1. **URL Configuration**:
-   * **Site URL**: your App address. Press **Save**.
-   * Under **Redirect URLs**, press **Add URL** and enter your App address followed by `/**`, like `https://foodtruckim.pages.dev/**`. Save.
+   * **Site URL**: `https://app.foodtruckim.com`. Press **Save**.
+   * Under **Redirect URLs**, press **Add URL** and enter `https://app.foodtruckim.com/**`. Save.
 2. **Sign In / Providers**, then click **Email**:
    * **Confirm email**: on.
    * **Email OTP Expiration**: `86400` (that's 24 hours, so invite and confirm links don't run out too fast).
    * Press **Save**.
 3. **Emails**, then the **SMTP Settings** tab. Turn on **Enable custom SMTP** and fill in:
-   * **Sender email address**: your Gmail address
+   * **Sender email address**: `noreply@foodtruckim.com`
    * **Sender name**: `Food Truck IM`
-   * **Host**: `smtp.gmail.com`
+   * **Host**: `smtp.resend.com`
    * **Port number**: `465`
-   * **Username**: your Gmail address
-   * **Password**: your Gmail app password
+   * **Username**: `resend`
+   * **Password**: your Resend API key
    * Press **Save changes**.
-4. **Rate Limits**: find **Rate limit for sending emails** (it starts at 30 an hour) and change it to `100`. Save. Gmail allows about 500 emails a day, so don't go above that.
-5. **Emails**, then the **Templates** tab. There are four to change. For each one:
-   1. Open its file on GitHub (links below), and press the **Copy raw file** button (two squares, top right of the file).
+4. **Emails**, then the **Templates** tab. There are four to change. For each one:
+   1. Open its file on GitHub (in the repository, click the `supabase` folder, then `templates`), and press the **Copy raw file** button (two squares, top right of the file).
    2. In Supabase, click the template, set the **Subject**, then select everything in the message box, delete it, and paste.
    3. Press **Save changes**.
 
-   | Template | File on GitHub (in the `supabase/templates` folder) | Subject |
+   | Template | File | Subject |
    |---|---|---|
    | Confirm sign up | `confirmation.html` | Confirm your email |
    | Invite user | `invite.html` | You're invited |
    | Reset password | `recovery.html` | Reset your password |
    | Change email address | `email_change.html` | Confirm your new email |
 
-   To find the files: on **github.com/Caelub787/Food-Truck-IM**, click the `supabase` folder, then `templates`.
-
-## Step 6: Supabase server settings (5 minutes)
+## Step 8: Supabase server settings (5 minutes)
 
 1. In the left menu, click **Edge Functions**, then **Secrets**.
-2. Add these five. For each, type the **Name**, paste the **Value**, and press **Save** (or add them all, then save):
+2. Add these six. For each, type the **Name**, paste the **Value**, and press **Save** (or add them all, then save):
 
    | Name | Value |
    |---|---|
-   | `SITE_URL` | your App address |
-   | `EMAIL_FROM` | `Food Truck IM <your Gmail address>`, like `Food Truck IM <foodtruckim@gmail.com>` |
-   | `SMTP_USER` | your Gmail address |
-   | `SMTP_PASS` | your Gmail app password |
+   | `SITE_URL` | `https://app.foodtruckim.com` |
+   | `EMAIL_PROVIDER` | `resend` |
+   | `RESEND_API_KEY` | your Resend API key |
+   | `EMAIL_FROM` | `Food Truck IM <noreply@foodtruckim.com>` |
+   | `EMAIL_REPLY_TO` | your GoDaddy inbox address. Replies to app emails go here. (Replies to supplier orders go to the manager who approved the order.) |
    | `CRON_SECRET` | make up a long password (letters and numbers only) and save it in your note |
 
-## Step 7: Three quick SQL steps (5 minutes)
+## Step 9: Three quick SQL steps (5 minutes)
 
 In Supabase, click **SQL Editor** in the left menu. For each file below: open it on GitHub (in the `supabase/setup` folder), press **Copy raw file**, then in Supabase press **+** (new query), paste, make the change it asks for, and press **Run** (bottom right). It should say **Success**.
 
-1. `1-app-owner.sql` makes you the App Owner. Change `you@example.com` to **your own email** (the one you'll log in with, not the app's Gmail). Keep the quote marks around it.
+1. `1-app-owner.sql` makes you the App Owner. Change `you@example.com` to the email **you'll log in with** (your GoDaddy inbox works). Keep the quote marks around it.
 2. `2-email-timer.sql` makes emails go out every minute. Change `https://YOUR-PROJECT.supabase.co` to your Project URL and `PASTE-YOUR-CRON-SECRET` to your cron secret. Keep the quote marks.
 3. `3-jobs-timer.sql` turns on reports, alerts, reminders, order lists, par suggestions, and photo cleanup. Nothing to change.
 
 Only run each one once. If one says something "already exists", it was already done and you can move on.
 
-## Step 8: Make your account
+## Step 10: Make your account
 
-1. Open your App address on your phone.
-2. Tap **Sign up your business**. Use the same email you put in `1-app-owner.sql`.
-3. Open the email from Food Truck IM and tap the link to confirm (check spam the first time, and mark it "not spam").
+1. On your phone, open **https://foodtruckim.com** and tap **Sign up** (or go straight to **https://app.foodtruckim.com/signup**).
+2. Fill in the **Sign up your business** form. Use the same email you put in `1-app-owner.sql`.
+3. Open the email from Food Truck IM and tap the link to confirm. Check spam the first time, and mark it "not spam".
 4. Log in. App Owners are approved right away, and you'll see the **App owner** page (called **Owner** on phones, under **More** if it doesn't fit). That's where you approve other businesses that sign up.
-5. Add the app to your home screen so it opens like a normal app:
+5. Add the app to your home screen so it opens like a normal app. Do this from **app.foodtruckim.com**, not the website:
    * iPhone (Safari): tap **Share**, then **Add to Home Screen**.
    * Android (Chrome): tap the menu (three dots), then **Install app** or **Add to Home screen**.
 6. Set up your business: trucks, supplies (add pictures if you like), products, and people. The starter kits fill in a lot for you. See [GUIDE.md](GUIDE.md).
 
-## Step 9: Push notifications (optional, 10 minutes)
+## Step 11: Push notifications (optional, 10 minutes)
 
 Push notifications are the alerts that pop up on phones (low stock, reminders, order lists). Emails work without this step.
 
@@ -189,9 +234,9 @@ Push notifications are the alerts that pop up on phones (low stock, reminders, o
    |---|---|
    | `VAPID_PUBLIC_KEY` | the public key from the app |
    | `VAPID_PRIVATE_KEY` | the private key from the app |
-   | `VAPID_SUBJECT` | `mailto:` and the app's Gmail address, like `mailto:foodtruckim@gmail.com` |
+   | `VAPID_SUBJECT` | `mailto:` and your inbox address, like `mailto:you@foodtruckim.com` |
 
-3. In Cloudflare, open your project (**Workers & Pages**, then `foodtruckim`), then **Settings**, then **Variables and Secrets**. Press **Add**, name it `VITE_VAPID_PUBLIC_KEY`, paste the public key, and save.
+3. In Cloudflare, open the **app** project (**Workers & Pages**, then `foodtruckimapp`), then **Settings**, then **Variables and Secrets**. Press **Add**, name it `VITE_VAPID_PUBLIC_KEY`, paste the public key, and save.
 4. Cloudflare only uses the new key after a fresh build. Go to **Deployments**, and on the newest one press the three dots, then **Retry deployment**. (If you can't find that, any new code going up to GitHub does the same thing.)
 5. On each phone, open **My account** and turn on **Notifications on this device**. On an iPhone, add the app to the home screen first and open it from there, or the switch won't work.
 
@@ -203,16 +248,18 @@ If the repository is public, GitHub stops timed runs after 60 days with no new c
 
 ## If something doesn't work
 
-* **No emails arrive**: check the spam folder. Check the Gmail app password (no spaces) and that custom SMTP is on (Step 5). In Supabase, **Table Editor**, then the `outbox` table, shows each app email and any error.
+* **Your GoDaddy email stopped working after Step 1**: an email record didn't come over. Compare Cloudflare's DNS records with your GoDaddy screenshots and add what's missing (email ones set to **DNS only**). If you're stuck, you can switch back: in GoDaddy, **Nameservers**, then **Change Nameservers**, then **GoDaddy Nameservers (recommended)**.
+* **Cloudflare still says "Pending" after a day**: check that the two nameservers in GoDaddy match Cloudflare's exactly, and that DNSSEC is off.
+* **No emails arrive**: check the spam folder. In Resend, click **Emails** to see each one and whether it was delivered. In Supabase, **Table Editor**, then the `outbox` table, shows each app email and any error. Check the Resend domain still says **Verified**.
 * **"That link didn't work"**: links work once and for 24 hours. Send a new invite from the People screen, or use **Forgot your password?** on the login page.
-* **The app says it isn't connected**: one of the two Cloudflare variables in Step 4 is missing or has a typo. Fix it in **Settings**, **Variables and Secrets**, then retry the newest deployment.
-* **The GitHub deploy has a red X**: click it and open the red step. Usually a secret from Step 3 has a typo or a space at the end.
+* **The app says it isn't connected**: one of the two Cloudflare variables in Step 5 is missing or has a typo. Fix it in the `foodtruckimapp` project's **Settings**, **Variables and Secrets**, then retry the newest deployment.
+* **A custom domain in Cloudflare won't turn Active**: wait 10 minutes. If it complains about an existing record, delete that old record (Step 6, number 1) and try again.
+* **The GitHub deploy has a red X**: click it and open the red step. Usually a secret from Step 4 has a typo or a space at the end.
 * **The project is paused**: free Supabase projects pause after about a week with nobody using them, and Supabase emails you first. Open the project in Supabase and press **Restore**. Nothing is lost.
-* **No reports or alerts**: check you ran `3-jobs-timer.sql` (Step 7). Reports go out at the hours in **Business settings**, in the business's time zone. Each person picks what they get in **My account**.
-* **No push notifications**: check Step 9, and that the phone allowed notifications for the app. The `outbox` table shows each one and any error.
+* **No reports or alerts**: check you ran `3-jobs-timer.sql` (Step 9). Reports go out at the hours in **Business settings**, in the business's time zone. Each person picks what they get in **My account**.
+* **No push notifications**: check Step 11, and that the phone allowed notifications for the app. The `outbox` table shows each one and any error.
 
 ## When you outgrow the free plans
 
-* Supabase Pro ($25 a month) gives 8 GB of database space, daily backups, and no pausing. Upgrading is one button in Supabase. Nothing in the app changes.
-* With your own domain, switch email from Gmail to Resend or Brevo for better delivery. Change the Edge Function secrets (`EMAIL_PROVIDER`, `EMAIL_FROM`, and the provider's key) and the Supabase SMTP settings. No code changes.
-* A custom address (like `app.yourbusiness.com`) can be added in Cloudflare under your project's **Custom domains**. Then update the Site URL, Redirect URLs, and `SITE_URL` to match.
+* **More than 100 emails a day**: Resend's paid plan, or Brevo's free plan (300 a day). Either is a settings change only (`EMAIL_PROVIDER`, the key, and the Supabase SMTP settings). No code changes.
+* **More database space or no pausing**: Supabase Pro ($25 a month) gives 8 GB, daily backups, and no pausing. Upgrading is one button in Supabase. Nothing in the app changes.

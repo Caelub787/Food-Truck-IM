@@ -31,9 +31,10 @@ Build it for any business:
 ## Free only
 
 Everything must run on free plans until the owner says otherwise. Don't add paid services or anything that needs a credit card.
-* App hosting: Cloudflare Pages (static build of the Vite app).
+* Domain: foodtruckim.com, registered at GoDaddy, DNS on Cloudflare. The owner's email inbox is GoDaddy email on the same domain.
+* App hosting: Cloudflare Pages, two projects from this repo. The app (`npm run build`, `dist`) at app.foodtruckim.com. The website (`npm run build:site`, `dist-site`) at foodtruckim.com, with the demo at /demo.
 * Backend: Supabase free plan (Postgres, Auth, Storage, Realtime, Edge Functions, `pg_cron`).
-* Email: Gmail account with an app password for now (Supabase Auth custom SMTP for login emails). Edge Functions can't use SMTP ports 25 or 587, so app emails use port 465 or an HTTPS email API. When the owner gets a domain, switch to Resend or Brevo through config only.
+* Email: Resend free plan (100 a day) sending from noreply@foodtruckim.com, for both Supabase Auth (custom SMTP, smtp.resend.com port 465) and app emails (`EMAIL_PROVIDER=resend`). Replies go to `EMAIL_REPLY_TO` (the owner's inbox), and supplier order replies go to the approving manager. Edge Functions can't use SMTP ports 25 or 587. Switching providers (Brevo, any SMTP on port 465) is config only.
 * Push: Web Push with VAPID keys.
 * CI and weekly backup: GitHub Actions.
 * Keep the free limits in mind: 500 MB database, small file storage (shrink photos to about 100 KB on the phone), project pauses after 7 days idle.
@@ -54,6 +55,7 @@ Everything must run on free plans until the owner says otherwise. Don't add paid
 * `npm test`: unit tests
 * `npm run test:db`: database tests (needs local Postgres, see `tests/db/README.md`)
 * `npm run build:demo`: the demo (the app with a pretend server and sample data in `src/demo/`). Screens that call a new database function need a matching handler in `src/demo/server.ts`, or the demo shows nothing for it.
+* `npm run build:site`: the website (`site/`, plain HTML with Tailwind) plus the demo at /demo, into `dist-site`.
 
 Run lint, typecheck, unit tests, and database tests before every push.
 
@@ -87,6 +89,8 @@ Drivers work with bad signal. Anything done on a shift (counts, loads, waste, re
 `tests/db/rules.test.ts` checks every table follows the rules above (row level security with policies, a company id, live updates, nothing for logged out visitors, pinned search paths). A new internal table that only server functions touch goes in its `internal` list, with a reason.
 
 `scripts/phone-screens.cjs` clicks through the built app at phone and desktop sizes with a fake Supabase (including a fake live connection) and saves screenshots (how to run it is at the top of the file). It also checks that changes from "someone else" appear without a reload, and that the app reconnects by itself. Run it after UI changes and look at the screenshots. Add new screens and live checks to it as they're built. Use `.filter({ visible: true })` in its text checks, since phone and desktop versions of a screen can both be on the page.
+
+The website has its own check: `scripts/site-screens.cjs` (phone and desktop screenshots, no sideways scrolling, pictures load, buttons go to app.foodtruckim.com, the demo opens). Its pictures of the app come from the demo through `scripts/site-shots.cjs`. Retake them after big screen changes. Website text follows the same plain writing rules, and it never promises prices or features the app doesn't have.
 
 ## Roles
 
@@ -170,4 +174,4 @@ Phases from `docs/PLAN.md`:
 9. Extras: built and tested locally (reports with CSV: usage vs sales, waste, free drinks, drivers, count checks, sales minus costs; manager fixes to finished shifts with history; demo mode; user guide in docs/GUIDE.md).
 10. Square: waiting on the owner
 
-Added after: pictures on supplies (optional, shrunk to about 40 KB on the phone, shown on lists, counts, and loading).
+Added after: pictures on supplies (optional, shrunk to about 40 KB on the phone, shown on lists, counts, and loading). The foodtruckim.com website with a public demo. Email replies go to the right person.
