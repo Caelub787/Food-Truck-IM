@@ -13,3 +13,4 @@ test-results
 playwright-report
 dist-mock
 dist-demo
+dist-site

@@ -5,6 +5,11 @@ import { useNavigate } from 'react-router'
 type DemoApi = { switchUser: (id: string) => void; resetDemo: () => void; currentUser: () => string }
 const api = () => (window as unknown as { __foodTruckDemo?: DemoApi }).__foodTruckDemo
 
+// Inside a shared link (a frame) downloads are blocked. On the public site
+// they work, and there's a link to sign up for real.
+const framed = window.top !== window
+const signupUrl = import.meta.env.VITE_SIGNUP_URL as string | undefined
+
 const roles = [
   { id: 'u-admin', label: 'Sam (admin)' },
   { id: 'u-m1', label: 'Maria (manager)' },
@@ -23,9 +28,19 @@ export function DemoBar() {
     navigate('/')
   }
   return (
-    <div className="mb-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
+    <div data-demo-bar className="mb-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-950">
       <p>
-        <strong>Demo with made up sample data.</strong> Try anything. Changes stay on this page and start over when you reload. Downloads (like CSV files) don't work here.
+        <strong>Demo with made up sample data.</strong> Try anything. Changes stay on this page and start over when you reload.
+        {framed && " Downloads (like CSV files) don't work here."}
+        {!framed && signupUrl && (
+          <>
+            {' '}
+            <a href={signupUrl} className="font-semibold text-violet-800 underline">
+              Sign up your business
+            </a>{' '}
+            when you're ready.
+          </>
+        )}
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2" role="radiogroup" aria-label="View the app as">
         <span className="font-medium">View as:</span>

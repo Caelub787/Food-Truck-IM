@@ -18,6 +18,8 @@ export default defineConfig({
     'import.meta.env.VITE_DEMO': JSON.stringify('1'),
     'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://demo.foodtruckim.invalid'),
     'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify('demo'),
+    // Where "Sign up your business" goes when the demo is on the public site.
+    'import.meta.env.VITE_SIGNUP_URL': JSON.stringify(process.env.VITE_SIGNUP_URL ?? 'https://app.foodtruckim.com/signup'),
   },
   plugins: [react(), tailwindcss()],
   build: {

@@ -25,7 +25,10 @@ export function InventoryPage() {
   const photo = useSupplyPhotos(catalog.data?.supplies)
 
   const active = (places.data ?? []).filter((p) => p.active)
-  const placeId = params.get('place') ?? active.find((p) => p.kind === 'location')?.id ?? active[0]?.id ?? ''
+  // Unless one is picked, open on the location holding the most stock (usually the main warehouse).
+  const stockLines = (id: string) => (levels.data ?? []).filter((l) => l.place_id === id && Number(l.quantity) !== 0).length
+  const busiest = active.filter((p) => p.kind === 'location').sort((a, b) => stockLines(b.id) - stockLines(a.id))[0]
+  const placeId = params.get('place') ?? busiest?.id ?? active[0]?.id ?? ''
   const place = places.data?.find((p) => p.id === placeId)
   const atPlace = (levels.data ?? []).filter((l) => l.place_id === placeId)
   const qty = (supplyId: string) => Number(atPlace.find((l) => l.supply_id === supplyId)?.quantity ?? 0)

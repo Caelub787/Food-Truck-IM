@@ -11,6 +11,7 @@ const pictures: Record<string, string> = {
   's-cherry': picture('🍒', '#fee2e2'),
   's-blue': picture('🫐', '#dbeafe'),
   's-cup-s': picture('🥤', '#f1f5f9'),
+  's-cup-l': picture('🥤', '#ede9fe'),
   's-ice': picture('🧊', '#e0f2fe'),
 }
 
