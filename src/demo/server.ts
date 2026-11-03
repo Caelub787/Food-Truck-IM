@@ -392,7 +392,6 @@ const rpcs: Record<string, (a: P) => [unknown, string[]?]> = {
     }
     return [null, ['budget_amounts']]
   },
-  bank_connections: () => [db.bank_connections],
   booking_page: ({ p_slug }) => {
     const st = db.company_settings![0]!
     if (!st.bookings_enabled || p_slug !== st.booking_slug) return [null]
@@ -859,30 +858,6 @@ async function handle(req: Request): Promise<Response> {
       reader.readAsDataURL(blob)
     }))
     return json({ Key: `photos/${key}`, Id: id() })
-  }
-  // The demo's pretend bank link: no Plaid, just a made up bank.
-  if (path === '/functions/v1/bank') {
-    const body = (await req.json()) as Row
-    if (body.action === 'status') return json({ configured: true })
-    if (body.action === 'link_token') return json({ demo: true })
-    if (body.action === 'exchange') {
-      const link = id()
-      db.bank_connections!.push({ id: link, institution: body.institution || 'Demo Bank', status: 'ok', error: null, last_synced_at: now() })
-      db.money_accounts!.push({
-        id: id(), name: 'Everyday checking', kind: 'bank', institution: body.institution || 'Demo Bank', mask: '3390', account_type: 'depository',
-        balance: 2875.5, available: 2875.5, balance_at: now(), connection_id: link, active: true, sort: 0, created_at: now(),
-      })
-    }
-    if (body.action === 'refresh') {
-      for (const l of db.bank_connections!) l.last_synced_at = now()
-      for (const a of db.money_accounts!) if (a.kind === 'bank') a.balance_at = now()
-    }
-    if (body.action === 'remove') {
-      db.bank_connections = db.bank_connections!.filter((l) => l.id !== body.connection_id)
-      db.money_accounts = db.money_accounts!.filter((a) => a.connection_id !== body.connection_id)
-    }
-    signal(['money_accounts', 'bank_connections'])
-    return json({ ok: true })
   }
   if (path === '/functions/v1/manage-invite') {
     const body = (await req.json()) as Row

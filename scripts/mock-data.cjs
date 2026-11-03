@@ -503,8 +503,8 @@ function addBudgetData(state) {
   }))
   t.budget_entries = [{ id: 'be-1', category_id: 'bc-fuel', entry_date: `${year}-${String(month).padStart(2, '0')}-01`, amount: 186.4, note: 'Gas', created_at: new Date().toISOString() }]
   t.money_accounts = [
-    { id: 'ma-1', name: 'Business checking', kind: 'bank', institution: 'Main Street Bank', mask: '4821', account_type: 'depository', balance: 12450.32, available: 12210.32, balance_at: new Date().toISOString(), connection_id: 'link-1', active: true, sort: 0 },
-    { id: 'ma-4', name: 'Cash box', kind: 'manual', institution: null, mask: null, account_type: null, balance: 340, available: null, balance_at: new Date().toISOString(), connection_id: null, active: true, sort: 0 },
+    { id: 'ma-1', name: 'Business checking', balance: 12450.32, balance_at: new Date().toISOString(), active: true, sort: 0 },
+    { id: 'ma-4', name: 'Cash box', balance: 340, balance_at: new Date().toISOString(), active: true, sort: 0 },
   ]
   Object.assign(state.rpcs, {
     budget_year: () => ({
@@ -514,7 +514,6 @@ function addBudgetData(state) {
         { category_id: 'bc-sales', month, amount: 1312 }, { category_id: 'bc-inv', month, amount: 640.5 },
       ],
     }),
-    bank_connections: () => [{ id: 'link-1', institution: 'Main Street Bank', status: 'ok', error: null, last_synced_at: new Date().toISOString() }],
     set_budget: () => null,
   })
 }

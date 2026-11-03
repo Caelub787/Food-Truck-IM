@@ -48,7 +48,3 @@ verify_jwt = false
 
 [functions.cleanup-photos]
 verify_jwt = false
-
-# Checks the caller's login and budget access itself.
-[functions.bank]
-verify_jwt = false

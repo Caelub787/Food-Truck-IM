@@ -57,35 +57,22 @@ describe('budget', () => {
     await expect(as(s.c.admin, (q) => q(`select public.set_budget($1, $2, $3)`, [fuel, months, -1]))).rejects.toThrow(/zero or more/)
   })
 
-  it('keeps bank links locked away: the app sees balances, never tokens, and can not change bank balances', async () => {
+  it('keeps typed in balances to the business, and has no bank links at all', async () => {
     const c = await createCompany()
-    const [{ id: link }] = (await as('service', (q) =>
-      q(`select public.service_bank_save($1, $2, 'item-1', 'locked-token', 'Main Street Bank') as id`, [c.id, c.admin.id]),
-    )) as [{ id: string }]
-    await as('service', (q) =>
-      q(`select public.service_bank_update($1, $2, 'ok')`, [
-        link,
-        JSON.stringify([{ account_id: 'acc-1', name: 'Checking', mask: '1234', type: 'depository', current: 5200.5, available: 5100 }]),
-      ]),
+    const driver = await addMember(c.id, 'driver')
+    const cash = await insertAs(c.admin, 'money_accounts', { name: 'Cash box', balance: 340 })
+    expect(await as(c.admin, (q) => q(`update public.money_accounts set balance = 400 where id = $1 returning balance::int as b`, [cash.id]))).toEqual([{ b: 400 }])
+    expect(await as(driver, (q) => q(`select 1 from public.money_accounts`))).toEqual([])
+    const other = await createCompany()
+    expect(await as(other.admin, (q) => q(`update public.money_accounts set balance = 1 where id = $1 returning id`, [cash.id]))).toEqual([])
+    expect(await as(other.admin, (q) => q(`delete from public.money_accounts where id = $1 returning id`, [cash.id]))).toEqual([])
+
+    // Nothing for bank logins is left in the database.
+    const leftovers = await as('service', (q) =>
+      q(`select (to_regclass('app.bank_connections') is not null) as links,
+                exists (select 1 from pg_proc where proname like 'service_bank%' or proname = 'bank_connections') as fns,
+                exists (select 1 from information_schema.columns where table_name = 'money_accounts' and column_name in ('kind', 'connection_id')) as cols`),
     )
-    const accounts = await as(c.admin, (q) => q(`select name, kind, mask, balance::float as balance from public.money_accounts`))
-    expect(accounts).toEqual([{ name: 'Checking', kind: 'bank', mask: '1234', balance: 5200.5 }])
-    const [{ r: links }] = (await as(c.admin, (q) => q(`select public.bank_connections() as r`))) as [{ r: Record<string, unknown>[] }]
-    expect(links).toHaveLength(1)
-    expect(links[0]).toMatchObject({ institution: 'Main Street Bank', status: 'ok' })
-    expect(JSON.stringify(links)).not.toContain('locked-token')
-
-    await expect(as(c.admin, (q) => q(`select access_token from app.bank_connections`))).rejects.toThrow(/permission/)
-    await expect(as(c.admin, (q) => q(`select public.service_bank_list($1)`, [c.id]))).rejects.toThrow(/permission/)
-    expect(await as(c.admin, (q) => q(`update public.money_accounts set balance = 1 where kind = 'bank' returning id`))).toEqual([])
-    await expect(insertAs(c.admin, 'money_accounts', { name: 'Fake', kind: 'bank' })).rejects.toThrow(/row-level security/)
-
-    // A bank that needs a new login keeps the last balance and says so.
-    await as('service', (q) => q(`select public.service_bank_update($1, '[]', 'needs_login', 'Log in again')`, [link]))
-    const [{ r: after }] = (await as(c.admin, (q) => q(`select public.bank_connections() as r`))) as [{ r: Record<string, unknown>[] }]
-    expect(after[0]).toMatchObject({ status: 'needs_login' })
-
-    await as('service', (q) => q(`select public.service_bank_remove($1, $2)`, [c.id, link]))
-    expect(await as(c.admin, (q) => q(`select 1 from public.money_accounts`))).toEqual([])
+    expect(leftovers).toEqual([{ links: false, fns: false, cols: false }])
   })
 })

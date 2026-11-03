@@ -266,13 +266,11 @@ export function seed(): Db {
     entry('be-8', 'bc-repair', 1, 20, 385, 'New generator belt'), entry('be-9', 'bc-ins', 1, 1, 250, 'Truck insurance'),
     entry('be-10', 'bc-sales', 1, 28, 3820, 'Sales before the app'),
   ]
-  t.bank_connections = [{ id: 'demo-link-1', institution: 'Main Street Bank', status: 'ok', error: null, last_synced_at: ago(2 * H) }]
-  const account = (row: Row): Row => ({ institution: null, mask: null, account_type: null, available: null, connection_id: null, active: true, sort: 0, created_at: ago(30 * D), ...row })
+  const account = (row: Row): Row => ({ active: true, sort: 0, created_at: ago(30 * D), ...row })
   t.money_accounts = [
-    account({ id: 'ma-1', name: 'Business checking', kind: 'bank', institution: 'Main Street Bank', mask: '4821', account_type: 'depository', balance: 12450.32, available: 12210.32, balance_at: ago(2 * H), connection_id: 'demo-link-1' }),
-    account({ id: 'ma-2', name: 'Savings', kind: 'bank', institution: 'Main Street Bank', mask: '9033', account_type: 'depository', balance: 8200, available: 8200, balance_at: ago(2 * H), connection_id: 'demo-link-1' }),
-    account({ id: 'ma-3', name: 'Business card', kind: 'bank', institution: 'Main Street Bank', mask: '1177', account_type: 'credit', balance: 612.4, balance_at: ago(2 * H), connection_id: 'demo-link-1' }),
-    account({ id: 'ma-4', name: 'Cash box', kind: 'manual', balance: 340, balance_at: ago(D) }),
+    account({ id: 'ma-1', name: 'Business checking', balance: 12450.32, balance_at: ago(D) }),
+    account({ id: 'ma-2', name: 'Savings', balance: 8200, balance_at: ago(6 * D) }),
+    account({ id: 'ma-4', name: 'Cash box', balance: 340, balance_at: ago(D) }),
   ]
 
   t.booking_supplies = [

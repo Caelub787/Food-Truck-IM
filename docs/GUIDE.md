@@ -11,7 +11,7 @@ A short guide for admins, managers, and drivers. Want to click around first? Bui
 5. **People**: invite managers and drivers by email. They get a link to set a password.
 6. **My account**: pick which emails and notifications you want, and turn on notifications for your phone.
 7. **Client bookings** (optional, Business settings): turn on your booking page, pick its name, the days and hours you take bookings, how much notice you need, and how many events can happen at once. Share the link it gives you.
-8. **Budget**: set a budget for each category, type in a few balances or link a bank, and decide in Business settings whether managers can see it.
+8. **Budget**: set a budget for each category, type in your account balances, and decide in Business settings whether managers can see it.
 
 ## For drivers: a shift
 
@@ -35,7 +35,7 @@ No signal? Keep going. Counts, loads, and waste are saved on the phone and sent 
 * **Sales**: upload a sales file from your register (Square and most others work). Match item names once. Uploading the same file again never counts anything twice, and any upload can be undone.
 * **Schedule** (if turned on): plan who works which truck and when. Repeat weekly. Booked events show here with their details.
 * **Bookings** (if turned on): requests from your booking page show up here and on Home, live. Open one to see who's asking and what they need. **Accept** to pick the truck, Lead and crew, the manager in charge, the on site contact, what to bring, the price, and notes. Everyone on it gets an email and a notification with the details, and the client gets a confirmation. **Decline** sends the client a polite email with your message. Booked events can be changed or cancelled later.
-* **Budget** (admins, and managers if allowed): money on hand from linked banks and typed in accounts, and each category's budget next to what really came in or went out. Inventory fills in from deliveries, sales from sales, and events from booking prices. Use **Add spending** for the rest. Switch to **Whole year** for one big sheet, and download it as a CSV.
+* **Budget** (admins, and managers if allowed): money on hand from the balances you type in, and each category's budget next to what really came in or went out. Inventory fills in from deliveries, sales from sales, and events from booking prices. Use **Add spending** for the rest. Switch to **Whole year** for one big sheet, and download it as a CSV.
 * **Reports**: usage vs sales, waste, free drinks, drivers, count checks, and sales minus costs, with CSV downloads.
 * **Fixing a finished shift**: open it, go to **Results**, and tap **Fix** on a supply. Say why. The change and the reason are kept in the history.
 

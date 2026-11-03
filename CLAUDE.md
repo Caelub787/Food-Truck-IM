@@ -105,11 +105,11 @@ The website has its own check: `scripts/site-screens.cjs` (phone and desktop scr
 * Accepting a booking creates a schedule plan through `save_schedule` and saves the details on the booking (truck, manager, contact, notes, price) and `booking_supplies`. The Lead and crew live on the schedule. Booked plans are changed from the booking, not the plan.
 * Clients get emails from the business's name with replies to the person who decided. Staff get `booking_staff` emails (pref `assignment_email`) and pushes.
 
-## Budget and bank balances
+## Budget
 
 * Admins see the budget. Managers only when `company_settings.budget_managers` is on (`app.can_budget()`, as restrictive policies on every budget table).
 * Inventory, sales, and events actuals are worked out in `public.budget_year`, never stored, so they can't drift.
-* Bank links are read only. No feature may ever move money. Plaid access tokens are locked with AES GCM (`BANK_TOKEN_KEY`, an Edge Function secret) and kept in `app.bank_connections`, which the app can't reach. Only the `bank` Edge Function uses them, through `service_bank_*` functions, after checking the caller can see the budget. Bank rows in `money_accounts` can't be changed from the app.
+* No bank links, on purpose: the owner doesn't want the app to hold bank logins or bank data, so it can't leak. Money accounts are balances people type in. Don't add bank connections (Plaid or anything like it) unless the owner asks again. No feature may ever move money.
 
 ## Company status
 
@@ -188,4 +188,4 @@ Phases from `docs/PLAN.md`:
 
 Added after: pictures on supplies (optional, shrunk to about 40 KB on the phone, shown on lists, counts, and loading). The foodtruckim.com website with a public demo. Email replies go to the right person.
 11. Client bookings: built and tested locally (public booking page, accept or decline with crew, manager, contact, and supplies, events on the schedule and shift, emails to clients and staff).
-12. Budget: built and tested locally (categories, monthly budgets, typed in spending, auto actuals from deliveries, sales, and events, year sheet with CSV, money accounts typed in or read only through Plaid).
+12. Budget: built and tested locally (categories, monthly budgets, typed in spending, auto actuals from deliveries, sales, and events, year sheet with CSV, money accounts with typed in balances). Bank links were built and then removed at the owner's request.

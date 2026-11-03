@@ -5,7 +5,6 @@ import type { CompanyStatus } from '@/lib/config'
 import { useLiveQuery } from '@/lib/live'
 import { rpc } from '@/lib/supabase'
 import { useAction } from '@/lib/useAction'
-import { BankKeyCard } from './BankKeyCard'
 import { PushKeysCard } from './PushKeysCard'
 
 type OwnerCompany = {
@@ -93,9 +92,8 @@ export function OwnerPage() {
           <CompanyCard key={company.id} company={company} />
         ))}
       </div>
-      <div className="mt-8 grid items-start gap-4 lg:grid-cols-2">
+      <div className="mt-8 lg:max-w-2xl">
         <PushKeysCard />
-        <BankKeyCard />
       </div>
     </div>
   )

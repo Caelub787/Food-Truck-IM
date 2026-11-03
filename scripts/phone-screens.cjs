@@ -676,8 +676,8 @@ async function runBudget(browser, size, label) {
 
   await page.goto(`${base}/budget`)
   await seen('Money on hand').waitFor()
-  await seen('Main Street Bank').waitFor()
   await seen('Business checking').waitFor()
+  if (await page.getByRole('button', { name: /Link a bank/ }).count()) throw new Error('There should be no bank linking')
   await page.getByLabel('Fuel budget').waitFor()
   await shot('110-budget')
 

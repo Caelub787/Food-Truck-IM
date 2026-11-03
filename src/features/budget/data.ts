@@ -1,23 +1,10 @@
 import { useLiveQuery } from '@/lib/live'
-import { callFunction, rpc, supabase } from '@/lib/supabase'
+import { rpc, supabase } from '@/lib/supabase'
 
 export type Category = { id: string; name: string; kind: 'income' | 'expense'; auto: 'inventory' | 'sales' | 'events' | null; sort: number; active: boolean }
 export type Entry = { id: string; category_id: string; entry_date: string; amount: number; note: string | null; created_at: string }
-export type MoneyAccount = {
-  id: string
-  name: string
-  kind: 'manual' | 'bank'
-  institution: string | null
-  mask: string | null
-  account_type: string | null
-  balance: number | null
-  available: number | null
-  balance_at: string | null
-  connection_id: string | null
-  active: boolean
-  sort: number
-}
-export type BankLink = { id: string; institution: string | null; status: 'ok' | 'needs_login' | 'error'; error: string | null; last_synced_at: string | null }
+/** A balance someone typed in. The app never connects to a bank. */
+export type MoneyAccount = { id: string; name: string; balance: number | null; balance_at: string | null; active: boolean; sort: number }
 type Cell = { category_id: string; month: number; amount: number }
 export type YearSheet = { budgets: Cell[]; actuals: Cell[] }
 
@@ -73,27 +60,6 @@ export function useAccounts() {
     },
   })
 }
-
-export function useBankLinks() {
-  return useLiveQuery({
-    tables: ['bank_connections', 'money_accounts'],
-    queryKey: ['bank-links'],
-    queryFn: () => rpc<BankLink[]>('bank_connections'),
-  })
-}
-
-/** Whether bank linking is set up on the server. Off (and quiet) if the function isn't there. */
-export function useBankReady() {
-  return useLiveQuery({
-    tables: [],
-    queryKey: ['bank-ready'],
-    staleTime: 30 * 60_000,
-    queryFn: () => callFunction<{ configured: boolean }>('bank', { action: 'status' }).then((r) => r.configured).catch(() => false),
-  })
-}
-
-/** Credit cards and loans are money owed, so they count against the total. */
-export const signedBalance = (a: MoneyAccount) => (a.account_type === 'credit' || a.account_type === 'loan' ? -1 : 1) * Number(a.balance ?? 0)
 
 /** Totals for a set of cells: what was budgeted and what really happened, by category. */
 export function sumBy(cells: Cell[], months: number[]) {
