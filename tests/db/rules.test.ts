@@ -43,7 +43,9 @@ describe('project rules for every table', () => {
     expect(missing.map((m) => m.name)).toEqual([])
   })
 
-  it('logged out visitors get nothing', async () => {
+  // The one exception: a business's public booking page, where its clients
+  // ask for a truck without logging in. Those two functions check everything.
+  it('logged out visitors get nothing (except the booking page)', async () => {
     const granted = await sql<{ t: string }>(
       `select distinct table_name as t from information_schema.role_table_grants where table_schema = 'public' and grantee = 'anon'`,
     )
@@ -52,7 +54,7 @@ describe('project rules for every table', () => {
       `select p.proname as f from pg_proc p join pg_namespace n on n.oid = p.pronamespace
        where n.nspname in ('public', 'app') and has_function_privilege('anon', p.oid, 'execute')`,
     )
-    expect(fns.map((f) => f.f)).toEqual([])
+    expect(fns.map((f) => f.f).sort()).toEqual(['booking_page', 'request_booking'])
   })
 
   it('every function that skips security rules pins its search path', async () => {

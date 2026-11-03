@@ -61,6 +61,22 @@ const list = (v: unknown) => (Array.isArray(v) ? v : []) as Record<string, unkno
 /** Links in payloads are paths inside the app. Anything else is ignored. */
 const appLink = (ctx: TemplateContext, path: unknown) => `${ctx.siteUrl}${typeof path === 'string' && path.startsWith('/') ? path : '/'}`
 
+/** "Saturday, May 9, 12:00 PM to 3:00 PM" in the business's time zone. */
+export function eventWhen(p: Payload): string {
+  const zone = typeof p.timezone === 'string' ? p.timezone : 'America/Chicago'
+  const start = new Date(String(p.starts_at))
+  const end = new Date(String(p.ends_at))
+  const date = new Intl.DateTimeFormat('en-US', { timeZone: zone, weekday: 'long', month: 'long', day: 'numeric' }).format(start)
+  const time = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' })
+  return `${date}, ${time.format(start)} to ${time.format(end)}`
+}
+
+/** Emails to a business's clients carry the business's name, not the app's. */
+const asBusiness = (ctx: TemplateContext, p: Payload): TemplateContext => ({ ...ctx, appName: String(p.company_name) })
+const replyTo = (p: Payload) => (typeof p.reply_to === 'string' && p.reply_to ? p.reply_to : undefined)
+const callLine = (p: Payload) => `Questions? Just reply to this email${p.company_phone ? ` or call ${p.company_phone}` : ''}.`
+const noteFrom = (p: Payload): Block[] => (p.message ? [`Note from ${p.company_name}: ${p.message}`] : [])
+
 const templates: Record<string, (p: Payload, ctx: TemplateContext) => Rendered> = {
   owner_new_signup: (p, ctx) =>
     build(
@@ -189,6 +205,74 @@ const templates: Record<string, (p: Payload, ctx: TemplateContext) => Rendered> 
       ],
     ),
   }),
+
+  // To a client: their booking request was accepted.
+  booking_accepted: (p, ctx) => ({
+    replyTo: replyTo(p),
+    ...build(asBusiness(ctx, p), `Your booking with ${p.company_name} is confirmed`, [
+      `Hi ${p.client_name},`,
+      `Good news! ${p.company_name} will be at your event.`,
+      { rows: [['When', eventWhen(p)], ['Where', String(p.place)], ...(p.event_name ? [['Event', String(p.event_name)] as [string, string]] : [])] },
+      ...noteFrom(p),
+      callLine(p),
+    ]),
+  }),
+
+  booking_declined: (p, ctx) => ({
+    replyTo: replyTo(p),
+    ...build(
+      asBusiness(ctx, p),
+      `About your booking request with ${p.company_name}`,
+      [`Hi ${p.client_name},`, `Sorry, ${p.company_name} can't make it on ${eventWhen(p)}.`, ...noteFrom(p), 'You\'re welcome to ask for another day.', callLine(p)],
+      p.booking_slug ? { label: 'Pick another day', url: `${ctx.siteUrl}/book/${encodeURIComponent(String(p.booking_slug))}` } : undefined,
+    ),
+  }),
+
+  booking_cancelled: (p, ctx) => ({
+    replyTo: replyTo(p),
+    ...build(asBusiness(ctx, p), `Your booking with ${p.company_name} was cancelled`, [
+      `Hi ${p.client_name},`,
+      `${p.company_name} had to cancel your booking for ${eventWhen(p)}.`,
+      ...noteFrom(p),
+      callLine(p),
+    ]),
+  }),
+
+  // To the Lead, crew, and manager in charge of an event.
+  booking_staff: (p, ctx) => {
+    const event = String(p.event_name)
+    const subject =
+      p.kind === 'cancelled' ? `Event cancelled: ${event}` : p.kind === 'updated' ? `Event changed: ${event}` : `You're on an event: ${event}`
+    const opening =
+      p.kind === 'cancelled'
+        ? `This event at ${p.company_name} was cancelled. It's off the schedule.`
+        : p.kind === 'updated'
+          ? `This event at ${p.company_name} changed. Here's the latest.`
+          : `You're working this event for ${p.company_name}.`
+    const crew = list(p.crew).map(String)
+    const contact = [p.contact_name, p.contact_phone].filter(Boolean).join(', ')
+    const rows: [string, string][] = [
+      ['When', eventWhen(p)],
+      ['Where', String(p.place)],
+      ...(p.truck ? [['Truck', String(p.truck)] as [string, string]] : []),
+      ...(p.lead ? [['Lead', String(p.lead)] as [string, string]] : []),
+      ...(crew.length ? [['Crew', crew.join(', ')] as [string, string]] : []),
+      ...(p.manager ? [['Manager', [p.manager, p.manager_phone].filter(Boolean).join(', ')] as [string, string]] : []),
+      ...(contact ? [['On site contact', contact] as [string, string]] : []),
+    ]
+    const supplies = list(p.supplies).map((l) => `${l.name}: ${l.amount}`)
+    return build(
+      ctx,
+      subject,
+      [
+        opening,
+        { rows },
+        ...(supplies.length && p.kind !== 'cancelled' ? [{ heading: 'Bring for this event' }, { list: supplies }] : []),
+        ...(p.notes && p.kind !== 'cancelled' ? [`Notes: ${p.notes}`] : []),
+      ],
+      p.kind === 'cancelled' ? undefined : { label: 'Open the schedule', url: appLink(ctx, p.url) },
+    )
+  },
 
   added_to_company: (p, ctx) =>
     build(

@@ -1,6 +1,6 @@
 import { assertEquals, assertStringIncludes, assertThrows } from 'jsr:@std/assert@1'
 import { parseFrom } from './mailer.ts'
-import { escapeHtml, renderTemplate } from './templates.ts'
+import { escapeHtml, eventWhen, renderTemplate } from './templates.ts'
 
 const ctx = { appName: 'Food Truck IM', siteUrl: 'https://app.example.com' }
 
@@ -82,4 +82,36 @@ Deno.test('supplier orders list the lines, and alerts only link inside the app',
   assertEquals(replied.replyTo, 'maria@iceco.test')
   const alert = renderTemplate('alert', { title: 'Low on Cups', body: '3 left', url: 'https://evil.example' }, ctx)
   assertStringIncludes(alert.text, 'Open the app: https://app.example.com/')
+})
+
+const booking = {
+  company_name: 'Ice Co', company_phone: '555 0100', timezone: 'America/Chicago', client_name: 'Pat',
+  event_name: 'Spring fair', place: '1 School Rd', starts_at: '2026-05-09T17:00:00Z', ends_at: '2026-05-09T20:00:00Z',
+}
+
+Deno.test('booking emails to clients carry the business name and reply to the manager', () => {
+  assertEquals(eventWhen(booking), 'Saturday, May 9, 12:00 PM to 3:00 PM')
+  const yes = renderTemplate('booking_accepted', { ...booking, message: 'See you there', reply_to: 'maria@iceco.test' }, ctx)
+  assertEquals(yes.subject, 'Your booking with Ice Co is confirmed')
+  assertEquals(yes.replyTo, 'maria@iceco.test')
+  assertStringIncludes(yes.html, '>Ice Co</p>')
+  assertStringIncludes(yes.text, 'Note from Ice Co: See you there')
+  const no = renderTemplate('booking_declined', { ...booking, booking_slug: 'ice-co' }, ctx)
+  assertStringIncludes(no.text, 'Pick another day: https://app.example.com/book/ice-co')
+})
+
+Deno.test('event emails to the crew list the people, the contact, and what to bring', () => {
+  const mail = renderTemplate(
+    'booking_staff',
+    { ...booking, kind: 'new', truck: 'Truck 1', lead: 'Jake', crew: ['Ava'], contact_name: 'Ms Lee', contact_phone: '555 0199',
+      supplies: [{ name: 'Cups', amount: '6 sleeves' }], notes: 'Park by the gym', url: '/schedule' },
+    ctx,
+  )
+  assertEquals(mail.subject, "You're on an event: Spring fair")
+  assertStringIncludes(mail.text, 'On site contact: Ms Lee, 555 0199')
+  assertStringIncludes(mail.text, '* Cups: 6 sleeves')
+  assertStringIncludes(mail.text, 'Open the schedule: https://app.example.com/schedule')
+  const off = renderTemplate('booking_staff', { ...booking, kind: 'cancelled', supplies: [{ name: 'Cups', amount: '1' }] }, ctx)
+  assertEquals(off.subject, 'Event cancelled: Spring fair')
+  assertEquals(off.text.includes('Cups'), false)
 })
