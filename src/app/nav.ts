@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, Boxes, Building2, CalendarCheck, CalendarDays, Home, MoreHorizontal, Receipt, Settings2, ShieldCheck, Truck, UserRound, Users, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, BarChart3, Boxes, Building2, CalendarCheck, CalendarDays, Home, PiggyBank, MoreHorizontal, Receipt, Settings2, ShieldCheck, Truck, UserRound, Users, type LucideIcon } from 'lucide-react'
 import type { Me } from '@/features/auth/session'
 import type { Settings } from '@/features/settings/useSettings'
 import type { Role } from '@/lib/config'
@@ -12,6 +12,8 @@ export type NavItem = {
   ownerOnly?: boolean
   /** Only shown when this business setting is on. */
   feature?: keyof Settings
+  /** Any other rule for who sees it. */
+  show?: (role: Role | undefined, settings: Settings | null | undefined) => boolean
 }
 
 // In the order they show in the side menu. The first four that apply also go
@@ -24,6 +26,14 @@ const items: NavItem[] = [
   { to: '/inventory', label: 'Inventory', short: 'Stock', icon: Boxes, roles: ['admin', 'manager'] },
   { to: '/sales', label: 'Sales', short: 'Sales', icon: Receipt, roles: ['admin', 'manager'] },
   { to: '/reports', label: 'Reports', short: 'Reports', icon: BarChart3, roles: ['admin', 'manager'] },
+  {
+    to: '/budget',
+    label: 'Budget',
+    short: 'Budget',
+    icon: PiggyBank,
+    roles: ['admin', 'manager'],
+    show: (role, settings) => role === 'admin' || Boolean(settings?.budget_managers),
+  },
   { to: '/flags', label: 'Needs a look', short: 'Flags', icon: AlertTriangle, roles: ['admin', 'manager'] },
   { to: '/setup', label: 'Setup', short: 'Setup', icon: Settings2, roles: ['admin', 'manager'] },
   { to: '/people', label: 'People', short: 'People', icon: Users, roles: ['admin', 'manager'] },
@@ -41,6 +51,7 @@ export function navItems(me: Me, settings: Settings | null | undefined): NavItem
     if (!me.profile) return item.to === '/account'
     if (item.roles && (!role || !item.roles.includes(role))) return false
     if (item.feature && !settings?.[item.feature]) return false
+    if (item.show && !item.show(role, settings)) return false
     return true
   })
 }

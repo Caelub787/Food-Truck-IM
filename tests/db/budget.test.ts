@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { call, insertAs, stockSetup } from './fixtures'
-import { addMember, as, createCompany, sql, type Company } from './helpers'
+import { addMember, as, createCompany, type Company } from './helpers'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Sheet = { budgets: any[]; actuals: any[] }

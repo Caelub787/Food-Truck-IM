@@ -38,6 +38,7 @@ export type Settings = {
   booking_notice_days: number
   booking_ahead_days: number
   booking_capacity: number | null
+  budget_managers: boolean
 }
 
 /** The business's settings and feature switches, kept live. */

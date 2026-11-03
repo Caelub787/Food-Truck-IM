@@ -6,6 +6,7 @@ import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
 import { RequireMember, RequireOwner, RequireRole, RequireSession } from '@/features/auth/guards'
 import { BookingPage } from '@/features/bookings/BookingPage'
 import { BookingsPage } from '@/features/bookings/BookingsPage'
+import { BudgetPage } from '@/features/budget/BudgetPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { SetPasswordPage } from '@/features/auth/SetPasswordPage'
 import { SignUpPage } from '@/features/auth/SignUpPage'
@@ -72,6 +73,7 @@ const routes: RouteObject[] = [
                 children: [
                   { path: 'people', element: <PeoplePage /> },
                   { path: 'bookings', element: <BookingsPage /> },
+                  { path: 'budget', element: <BudgetPage /> },
                   { path: 'inventory', element: <InventoryPage /> },
                   { path: 'inventory/receive', element: <ReceivePage /> },
                   { path: 'inventory/count', element: <CountPage /> },

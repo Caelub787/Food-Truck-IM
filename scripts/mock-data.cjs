@@ -487,3 +487,35 @@ function addBookingData(state) {
   })
 }
 module.exports.addBookingData = addBookingData
+
+// Budget: categories, a plan for this year, typed in spending, and money accounts.
+function addBudgetData(state) {
+  const t = state.tables
+  const year = new Date().getFullYear()
+  const month = new Date().getMonth() + 1
+  const cat = (id, name, kind, auto, sort) => ({ id, name, kind, auto, sort, active: true })
+  t.budget_categories = [
+    cat('bc-sales', 'Sales', 'income', 'sales', 1), cat('bc-events', 'Events', 'income', 'events', 2),
+    cat('bc-inv', 'Inventory', 'expense', 'inventory', 10), cat('bc-fuel', 'Fuel', 'expense', null, 11), cat('bc-pay', 'Payroll', 'expense', null, 12),
+  ]
+  t.budget_amounts = [['bc-sales', 4000], ['bc-inv', 1200], ['bc-fuel', 450], ['bc-pay', 2200]].map(([category_id, amount]) => ({
+    category_id, month: `${year}-${String(month).padStart(2, '0')}-01`, amount,
+  }))
+  t.budget_entries = [{ id: 'be-1', category_id: 'bc-fuel', entry_date: `${year}-${String(month).padStart(2, '0')}-01`, amount: 186.4, note: 'Gas', created_at: new Date().toISOString() }]
+  t.money_accounts = [
+    { id: 'ma-1', name: 'Business checking', kind: 'bank', institution: 'Main Street Bank', mask: '4821', account_type: 'depository', balance: 12450.32, available: 12210.32, balance_at: new Date().toISOString(), connection_id: 'link-1', active: true, sort: 0 },
+    { id: 'ma-4', name: 'Cash box', kind: 'manual', institution: null, mask: null, account_type: null, balance: 340, available: null, balance_at: new Date().toISOString(), connection_id: null, active: true, sort: 0 },
+  ]
+  Object.assign(state.rpcs, {
+    budget_year: () => ({
+      budgets: t.budget_amounts.map((a) => ({ category_id: a.category_id, month: Number(a.month.slice(5, 7)), amount: a.amount })),
+      actuals: [
+        ...t.budget_entries.map((e) => ({ category_id: e.category_id, month: Number(e.entry_date.slice(5, 7)), amount: e.amount })),
+        { category_id: 'bc-sales', month, amount: 1312 }, { category_id: 'bc-inv', month, amount: 640.5 },
+      ],
+    }),
+    bank_connections: () => [{ id: 'link-1', institution: 'Main Street Bank', status: 'ok', error: null, last_synced_at: new Date().toISOString() }],
+    set_budget: () => null,
+  })
+}
+module.exports.addBudgetData = addBudgetData

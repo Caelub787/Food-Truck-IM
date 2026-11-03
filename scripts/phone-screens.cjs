@@ -9,7 +9,7 @@
 // Screenshots land in test-results/screens. The script exits with an error if a check fails.
 const { chromium } = require('playwright')
 const path = require('node:path')
-const { setupTables, addShiftData, addSalesData, addPlanData, addReportData, addBookingData } = require('./mock-data.cjs')
+const { setupTables, addShiftData, addSalesData, addPlanData, addReportData, addBookingData, addBudgetData } = require('./mock-data.cjs')
 
 const OUT = process.env.OUT ?? path.join(__dirname, '../test-results/screens')
 const base = process.env.BASE_URL ?? 'http://localhost:4173'
@@ -667,6 +667,65 @@ async function runBookings(browser, size, label) {
   return { checks, errors }
 }
 
+async function runBudget(browser, size, label) {
+  const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
+  addBudgetData(state)
+  const checks = []
+  const writes = []
+  page.on('request', (r) => ['POST', 'PATCH'].includes(r.method()) && /budget_amounts|budget_entries/.test(r.url()) && writes.push({ url: r.url(), body: r.postDataJSON() }))
+
+  await page.goto(`${base}/budget`)
+  await seen('Money on hand').waitFor()
+  await seen('Main Street Bank').waitFor()
+  await seen('Business checking').waitFor()
+  await page.getByLabel('Fuel budget').waitFor()
+  await shot('110-budget')
+
+  // Change the fuel budget: it saves when you leave the box.
+  await page.getByLabel('Fuel budget').fill('500')
+  await page.getByLabel('Payroll budget').click()
+  for (let i = 0; i < 30 && !writes.some((w) => w.url.includes('budget_amounts')); i++) await page.waitForTimeout(100)
+  const saved = writes.find((w) => w.url.includes('budget_amounts'))
+  if (saved?.body?.amount !== 500 || saved.body.category_id !== 'bc-fuel') throw new Error(`budget not saved: ${JSON.stringify(saved)}`)
+  checks.push('budgets save when you leave the box')
+
+  // Type in spending.
+  await page.getByRole('button', { name: 'Add spending' }).click()
+  await page.getByLabel('Category').selectOption({ label: 'Fuel' })
+  await page.getByLabel('Amount ($)').fill('45')
+  await page.getByLabel('Note (optional)').fill('Gas for Truck 2')
+  await shot('111-add-spending')
+  await page.getByRole('button', { name: 'Add it' }).click()
+  for (let i = 0; i < 30 && !writes.some((w) => w.url.includes('budget_entries')); i++) await page.waitForTimeout(100)
+  const entry = writes.find((w) => w.url.includes('budget_entries'))?.body
+  if (entry?.amount !== 45 || entry.category_id !== 'bc-fuel' || entry.note !== 'Gas for Truck 2') throw new Error(`spending not saved: ${JSON.stringify(entry)}`)
+  checks.push('spending is typed in')
+
+  // Someone else adds an account. It shows up here by itself.
+  await markPage(page)
+  state.tables.money_accounts.push({ ...state.tables.money_accounts[1], id: 'ma-live', name: 'Tip jar', balance: 55 })
+  live.signal('company:c1', 'money_accounts')
+  await seen('Tip jar').waitFor({ timeout: 3000 })
+  await assertNoReload(page, 'new money account')
+  checks.push('money accounts update live')
+
+  await page.getByRole('radio', { name: 'Whole year' }).click()
+  await seen('All money out').waitFor()
+  await shot('112-budget-year')
+  checks.push('the whole year shows as a sheet')
+
+  // Managers don't see the budget unless the business lets them.
+  state.me.user_id = 'u-m1'
+  state.me.profile = { full_name: 'Maria Lopez', role: 'manager', active: true, phone: null, joined_at: '2026-10-02' }
+  await page.goto(`${base}/more`)
+  await page.getByRole('link', { name: 'Reports' }).filter({ visible: true }).first().waitFor()
+  if (await page.getByRole('link', { name: 'Budget' }).filter({ visible: true }).count()) throw new Error('Managers should not see Budget')
+  checks.push('managers only see the budget when allowed')
+
+  await context.close()
+  return { checks, errors }
+}
+
 async function runPlans(browser, size, label) {
   const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
   addShiftData(state)
@@ -837,7 +896,7 @@ async function runInventory(browser, size, label) {
     ['phone', { width: 390, height: 844 }],
     ['desktop', { width: 1366, height: 860 }],
   ]) {
-    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift, runSales, runPlans, runReports, runBookings })[n]) : [run, runSetup, runInventory, runShift, runSales, runPlans, runReports, runBookings])) {
+    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift, runSales, runPlans, runReports, runBookings, runBudget })[n]) : [run, runSetup, runInventory, runShift, runSales, runPlans, runReports, runBookings, runBudget])) {
       const { checks, errors } = await flow(browser, size, label)
       console.log(`${label} ${flow.name}: ${checks.length} checks passed: ${checks.join('; ')}`)
       if (errors.length) {

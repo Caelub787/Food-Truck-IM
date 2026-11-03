@@ -362,6 +362,37 @@ function saveBookingDetails(b: Row, p: P) {
 }
 
 const rpcs: Record<string, (a: P) => [unknown, string[]?]> = {
+  budget_year: ({ p_year }) => {
+    const yearOf = (iso: string) => Number(iso.slice(0, 4))
+    const monthOf = (iso: string) => new Date(iso).getMonth() + 1
+    const budgets = db.budget_amounts!.filter((a) => yearOf(a.month) === p_year).map((a) => ({ category_id: a.category_id, month: Number(a.month.slice(5, 7)), amount: a.amount }))
+    const auto = (kind: string) => db.budget_categories!.find((c) => c.auto === kind)?.id
+    const lines = [
+      ...db.budget_entries!.filter((e) => yearOf(e.entry_date) === p_year).map((e) => ({ category_id: e.category_id, month: Number(e.entry_date.slice(5, 7)), amount: Number(e.amount) })),
+      ...db.stock_movements!.filter((m) => m.kind === 'delivery' && new Date(m.created_at).getFullYear() === p_year)
+        .map((m) => ({ category_id: auto('inventory'), month: monthOf(m.created_at), amount: Number(m.quantity) * Number(m.unit_cost) })),
+      ...db.sales!.filter((x) => new Date(x.sold_at).getFullYear() === p_year).map((x) => ({ category_id: auto('sales'), month: monthOf(x.sold_at), amount: Number(x.price) })),
+      ...db.bookings!.filter((b) => b.status === 'accepted' && b.price != null && new Date(b.starts_at).getFullYear() === p_year)
+        .map((b) => ({ category_id: auto('events'), month: monthOf(b.starts_at), amount: Number(b.price) })),
+    ]
+    const sums = new Map<string, Row>()
+    for (const l of lines) {
+      const key = `${l.category_id}:${l.month}`
+      const s = sums.get(key) ?? { category_id: l.category_id, month: l.month, amount: 0 }
+      s.amount = Math.round((s.amount + l.amount) * 100) / 100
+      sums.set(key, s)
+    }
+    return [{ budgets, actuals: [...sums.values()] }]
+  },
+  set_budget: ({ p_category_id, p_months, p_amount }) => {
+    for (const month of p_months as string[]) {
+      const row = db.budget_amounts!.find((a) => a.category_id === p_category_id && a.month === month)
+      if (row) row.amount = p_amount
+      else db.budget_amounts!.push({ category_id: p_category_id, month, amount: p_amount })
+    }
+    return [null, ['budget_amounts']]
+  },
+  bank_connections: () => [db.bank_connections],
   booking_page: ({ p_slug }) => {
     const st = db.company_settings![0]!
     if (!st.bookings_enabled || p_slug !== st.booking_slug) return [null]
@@ -828,6 +859,30 @@ async function handle(req: Request): Promise<Response> {
       reader.readAsDataURL(blob)
     }))
     return json({ Key: `photos/${key}`, Id: id() })
+  }
+  // The demo's pretend bank link: no Plaid, just a made up bank.
+  if (path === '/functions/v1/bank') {
+    const body = (await req.json()) as Row
+    if (body.action === 'status') return json({ configured: true })
+    if (body.action === 'link_token') return json({ demo: true })
+    if (body.action === 'exchange') {
+      const link = id()
+      db.bank_connections!.push({ id: link, institution: body.institution || 'Demo Bank', status: 'ok', error: null, last_synced_at: now() })
+      db.money_accounts!.push({
+        id: id(), name: 'Everyday checking', kind: 'bank', institution: body.institution || 'Demo Bank', mask: '3390', account_type: 'depository',
+        balance: 2875.5, available: 2875.5, balance_at: now(), connection_id: link, active: true, sort: 0, created_at: now(),
+      })
+    }
+    if (body.action === 'refresh') {
+      for (const l of db.bank_connections!) l.last_synced_at = now()
+      for (const a of db.money_accounts!) if (a.kind === 'bank') a.balance_at = now()
+    }
+    if (body.action === 'remove') {
+      db.bank_connections = db.bank_connections!.filter((l) => l.id !== body.connection_id)
+      db.money_accounts = db.money_accounts!.filter((a) => a.connection_id !== body.connection_id)
+    }
+    signal(['money_accounts', 'bank_connections'])
+    return json({ ok: true })
   }
   if (path === '/functions/v1/manage-invite') {
     const body = (await req.json()) as Row

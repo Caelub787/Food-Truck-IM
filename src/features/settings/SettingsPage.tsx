@@ -128,6 +128,7 @@ function SettingsForms({ settings }: { settings: Settings }) {
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setS({ ...s, [key]: value })
   const features = useSaveSettings()
   const bookings = useSaveSettings()
+  const budget = useSaveSettings()
   const sales = useSaveSettings()
   const limits = useSaveSettings()
   const timing = useSaveSettings()
@@ -276,6 +277,15 @@ function SettingsForms({ settings }: { settings: Settings }) {
             />
           </div>
         )}
+      </Section>
+
+      <Section title="Budget" onSave={() => void budget.run({ budget_managers: s.budget_managers })} busy={budget.busy} error={budget.error} saved={budget.saved}>
+        <Toggle
+          label="Managers can see the budget"
+          hint="Admins always can. Turn this on to let managers see and change the budget and money accounts too."
+          checked={s.budget_managers}
+          onChange={(v) => set('budget_managers', v)}
+        />
       </Section>
 
       <Section

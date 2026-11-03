@@ -36,6 +36,7 @@ export function seed(): Db {
       bookings_enabled: true, booking_slug: 'island-ice-co',
       booking_intro: 'We bring shaved ice and coffee to schools, parties, and events around town. Pick a day and tell us about it!',
       booking_days: [0, 3, 4, 5, 6], booking_open: '10:00:00', booking_close: '21:00:00', booking_notice_days: 2, booking_ahead_days: 120, booking_capacity: null,
+      budget_managers: false,
     },
   ]
   t.locations = [
@@ -235,6 +236,45 @@ export function seed(): Db {
       decided_at: ago(2 * D), created_at: ago(4 * D),
     }),
   ]
+  // Budget: categories, this year's plan, some typed in spending, and money on hand.
+  const year = new Date().getFullYear()
+  const thisMonth = new Date().getMonth() + 1
+  const cat = (id: string, name: string, kind: string, auto: string | null, sort: number) => ({ id, name, kind, auto, sort, active: true, created_at: ago(30 * D) })
+  t.budget_categories = [
+    cat('bc-sales', 'Sales', 'income', 'sales', 1), cat('bc-events', 'Events', 'income', 'events', 2), cat('bc-other-in', 'Other income', 'income', null, 3),
+    cat('bc-inv', 'Inventory', 'expense', 'inventory', 10), cat('bc-fuel', 'Fuel', 'expense', null, 11), cat('bc-pay', 'Payroll', 'expense', null, 12),
+    cat('bc-repair', 'Truck repairs', 'expense', null, 13), cat('bc-ins', 'Insurance', 'expense', null, 14), cat('bc-permit', 'Permits and fees', 'expense', null, 15),
+    cat('bc-rent', 'Commissary or rent', 'expense', null, 16), cat('bc-mkt', 'Marketing', 'expense', null, 17), cat('bc-other', 'Other', 'expense', null, 18),
+  ]
+  const plan: Record<string, number> = {
+    'bc-sales': 4000, 'bc-events': 900, 'bc-inv': 1200, 'bc-fuel': 450, 'bc-pay': 2200, 'bc-repair': 200, 'bc-ins': 250, 'bc-permit': 75, 'bc-rent': 400, 'bc-mkt': 100,
+  }
+  t.budget_amounts = Object.entries(plan).flatMap(([category_id, amount]) =>
+    Array.from({ length: 12 }, (_, i) => ({ category_id, month: `${year}-${String(i + 1).padStart(2, '0')}-01`, amount })),
+  )
+  const onDay = (monthsBack: number, d: number) => {
+    const x = new Date(year, thisMonth - 1 - monthsBack, d)
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+  }
+  const today = new Date().getDate()
+  const entry = (id: string, category_id: string, monthsBack: number, d: number, amount: number, note: string) =>
+    ({ id, category_id, entry_date: onDay(monthsBack, Math.min(d, monthsBack ? 28 : today)), amount, note, created_by: 'u-admin', created_at: ago(D) })
+  t.budget_entries = [
+    entry('be-1', 'bc-fuel', 0, 2, 186.4, 'Gas for Truck 1 and 2'), entry('be-2', 'bc-pay', 0, 1, 1640, 'Payroll, first half'),
+    entry('be-3', 'bc-ins', 0, 1, 250, 'Truck insurance'), entry('be-4', 'bc-rent', 0, 1, 400, 'Commissary kitchen'),
+    entry('be-5', 'bc-fuel', 1, 12, 412.8, 'Gas'), entry('be-6', 'bc-pay', 1, 15, 2150, 'Payroll'), entry('be-7', 'bc-rent', 1, 1, 400, 'Commissary kitchen'),
+    entry('be-8', 'bc-repair', 1, 20, 385, 'New generator belt'), entry('be-9', 'bc-ins', 1, 1, 250, 'Truck insurance'),
+    entry('be-10', 'bc-sales', 1, 28, 3820, 'Sales before the app'),
+  ]
+  t.bank_connections = [{ id: 'demo-link-1', institution: 'Main Street Bank', status: 'ok', error: null, last_synced_at: ago(2 * H) }]
+  const account = (row: Row): Row => ({ institution: null, mask: null, account_type: null, available: null, connection_id: null, active: true, sort: 0, created_at: ago(30 * D), ...row })
+  t.money_accounts = [
+    account({ id: 'ma-1', name: 'Business checking', kind: 'bank', institution: 'Main Street Bank', mask: '4821', account_type: 'depository', balance: 12450.32, available: 12210.32, balance_at: ago(2 * H), connection_id: 'demo-link-1' }),
+    account({ id: 'ma-2', name: 'Savings', kind: 'bank', institution: 'Main Street Bank', mask: '9033', account_type: 'depository', balance: 8200, available: 8200, balance_at: ago(2 * H), connection_id: 'demo-link-1' }),
+    account({ id: 'ma-3', name: 'Business card', kind: 'bank', institution: 'Main Street Bank', mask: '1177', account_type: 'credit', balance: 612.4, balance_at: ago(2 * H), connection_id: 'demo-link-1' }),
+    account({ id: 'ma-4', name: 'Cash box', kind: 'manual', balance: 340, balance_at: ago(D) }),
+  ]
+
   t.booking_supplies = [
     { booking_id: 'bk-3', supply_id: 's-cup-s', quantity: 400 },
     { booking_id: 'bk-3', supply_id: 's-ice', quantity: 200 },
