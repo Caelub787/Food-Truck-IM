@@ -198,7 +198,7 @@ export function seed(): Db {
     return d.toISOString()
   }
   t.schedules = [
-    { id: 'pl-1', truck_id: 'tr-3', starts_at: ago(H), ends_at: ago(-5 * H), event_name: 'Office park', place: 'Building C lot', notes: null, lead_id: 'u-m1', status: 'planned', series_id: null },
+    { id: 'pl-1', truck_id: 'tr-3', starts_at: at(0, new Date().getHours() - 1), ends_at: at(0, new Date().getHours() + 5), event_name: 'Office park', place: 'Building C lot', notes: null, lead_id: 'u-m1', status: 'planned', series_id: null },
     { id: 'pl-2', truck_id: 'tr-1', starts_at: at(1, 12), ends_at: at(1, 20), event_name: 'Ball game', place: 'Riverside Park', notes: null, lead_id: 'u-d1', status: 'planned', series_id: 'ser-1' },
     { id: 'pl-3', truck_id: 'tr-2', starts_at: at(2, 11), ends_at: at(2, 18), event_name: null, place: null, notes: 'Bring extra cups', lead_id: 'u-d2', status: 'planned', series_id: null },
   ]

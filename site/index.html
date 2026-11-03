@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Food Truck IM: inventory for food trucks</title>
-    <meta name="description" content="Food Truck IM keeps track of what's on every truck and in the warehouse. Your crew counts, loads, and logs waste from their phones. Reports, alerts, and order lists happen on their own." />
+    <title>Food Truck IM: run your food truck business from one app</title>
+    <meta name="description" content="Food Truck IM is the all in one app for food truck businesses: inventory that counts down to the last cup, schedules, a booking page for your clients, a budget that fills itself in, and reports that send themselves." />
     <link rel="canonical" href="https://foodtruckim.com/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="theme-color" content="#0f766e" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://foodtruckim.com/" />
-    <meta property="og:title" content="Food Truck IM: inventory for food trucks" />
-    <meta property="og:description" content="Know what's on every truck without the clipboard. Counts, loading, waste, sales, and reports, all from your crew's phones." />
+    <meta property="og:title" content="Food Truck IM: run your food truck business from one app" />
+    <meta property="og:description" content="Inventory, scheduling, client bookings, budgeting, and reports, all from your crew's phones." />
     <meta property="og:image" content="https://foodtruckim.com/shots/share.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="./style.css" />
@@ -24,10 +24,12 @@
           <img src="/favicon.svg" alt="" class="size-9" />
           <span class="text-lg">Food Truck IM</span>
         </a>
-        <nav class="hidden items-center gap-1 text-slate-600 md:flex" aria-label="Sections">
-          <a href="#features" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-slate-900">Features</a>
-          <a href="#how" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-slate-900">How it works</a>
-          <a href="#questions" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-slate-900">Questions</a>
+        <nav class="hidden items-center gap-1 text-slate-600 lg:flex" aria-label="Sections">
+          <a href="#inventory" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-slate-900">Inventory</a>
+          <a href="#bookings" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-slate-900">Bookings</a>
+          <a href="#scheduling" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-slate-900">Scheduling</a>
+          <a href="#budget" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-slate-900">Budget</a>
+          <a href="#reports" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-slate-900">Reports</a>
           <a href="/demo/" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-slate-900">Demo</a>
         </nav>
         <div class="flex items-center gap-1 sm:gap-2">
@@ -42,10 +44,10 @@
       <section class="overflow-hidden bg-gradient-to-b from-brand-50 to-white">
         <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 pt-12 pb-16 md:pt-20 lg:grid-cols-2 lg:pb-24">
           <div>
-            <p class="font-semibold text-brand-700">Inventory for food trucks</p>
-            <h1 class="mt-3 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">Know what's on every truck, without the clipboard.</h1>
+            <p class="font-semibold text-brand-700">The all in one app for food trucks</p>
+            <h1 class="mt-3 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">Run your whole food truck business from one app.</h1>
             <p class="mt-5 text-lg text-slate-600 sm:text-xl">
-              Your crew counts, loads, and logs waste from their phones. Food Truck IM keeps the stock, sends the reports, and tells you when something doesn't add up.
+              Inventory down to the last cup, a schedule your crew can see, a booking page for your clients, and a budget that fills itself in. All from the phones your crew already has.
             </p>
             <div class="mt-8 flex flex-col gap-3 sm:flex-row">
               <a href="https://app.foodtruckim.com/signup" class="btn btn-primary text-lg">Sign up your business</a>
@@ -68,29 +70,42 @@
         </div>
       </section>
 
-      <!-- What people only have to do -->
+      <!-- Everything in one place -->
       <section class="border-y border-slate-200 bg-white">
-        <div class="mx-auto grid max-w-6xl gap-6 px-4 py-10 text-center sm:grid-cols-3">
-          <div>
-            <p class="text-3xl font-extrabold text-brand-700">You count.</p>
-            <p class="mt-1 text-slate-600">Start and end of each shift, from a phone.</p>
-          </div>
-          <div>
-            <p class="text-3xl font-extrabold text-brand-700">You load.</p>
-            <p class="mt-1 text-slate-600">From a list built from your par levels.</p>
-          </div>
-          <div>
-            <p class="text-3xl font-extrabold text-brand-700">It does the rest.</p>
-            <p class="mt-1 text-slate-600">Reports, alerts, order lists, and flags.</p>
-          </div>
+        <div class="mx-auto max-w-6xl px-4 py-8">
+          <p class="text-center text-sm font-semibold tracking-wide text-slate-500 uppercase">Everything in one place</p>
+          <ul class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            <li><a href="#inventory" class="flex min-h-12 items-center justify-center rounded-xl bg-brand-700 px-3 font-semibold text-white hover:bg-brand-800">Inventory</a></li>
+            <li><a href="#bookings" class="flex min-h-12 items-center justify-center rounded-xl border border-slate-200 px-3 font-semibold hover:border-brand-600 hover:bg-brand-50">Client bookings</a></li>
+            <li><a href="#scheduling" class="flex min-h-12 items-center justify-center rounded-xl border border-slate-200 px-3 font-semibold hover:border-brand-600 hover:bg-brand-50">Scheduling</a></li>
+            <li><a href="#budget" class="flex min-h-12 items-center justify-center rounded-xl border border-slate-200 px-3 font-semibold hover:border-brand-600 hover:bg-brand-50">Budget</a></li>
+            <li class="col-span-2 sm:col-span-1"><a href="#reports" class="flex min-h-12 items-center justify-center rounded-xl border border-slate-200 px-3 font-semibold hover:border-brand-600 hover:bg-brand-50">Reports</a></li>
+          </ul>
         </div>
       </section>
 
-      <!-- Features -->
-      <section id="features" class="bg-slate-50">
+      <!-- Inventory: the main event -->
+      <section id="inventory" class="bg-slate-50">
         <div class="mx-auto max-w-6xl px-4 py-16 md:py-24">
-          <h2 class="max-w-2xl text-3xl font-extrabold tracking-tight sm:text-4xl">Everything a truck needs, nothing it doesn't</h2>
-          <p class="mt-4 max-w-2xl text-lg text-slate-600">People only enter what the app can't know. Everything else happens on its own.</p>
+          <p class="font-semibold text-brand-700">Inventory</p>
+          <h2 class="mt-2 max-w-3xl text-3xl font-extrabold tracking-tight sm:text-4xl">Know what's on every truck, down to the last cup.</h2>
+          <p class="mt-4 max-w-2xl text-lg text-slate-600">
+            The heart of Food Truck IM. Every load, count, and spill is logged, every shift is checked, and you hear about it when something doesn't add up. Your crew only enters what the app can't know.
+          </p>
+          <div class="mt-6 grid max-w-3xl gap-3 sm:grid-cols-3">
+            <div class="rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-slate-200">
+              <p class="text-2xl font-extrabold text-brand-700">You count.</p>
+              <p class="mt-1 text-sm text-slate-600">Start and end of each shift.</p>
+            </div>
+            <div class="rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-slate-200">
+              <p class="text-2xl font-extrabold text-brand-700">You load.</p>
+              <p class="mt-1 text-sm text-slate-600">From a list made for you.</p>
+            </div>
+            <div class="rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-slate-200">
+              <p class="text-2xl font-extrabold text-brand-700">It does the rest.</p>
+              <p class="mt-1 text-sm text-slate-600">Alerts, orders, and flags.</p>
+            </div>
+          </div>
           <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <div class="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></svg></div>
@@ -100,12 +115,7 @@
             <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <div class="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg></div>
               <h3 class="mt-4 text-lg font-bold">Loading lists</h3>
-              <p class="mt-2 text-slate-600">Built from your par levels, so every truck leaves with what it needs. Plus an optional loading checklist.</p>
-            </article>
-            <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <div class="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg></div>
-              <h3 class="mt-4 text-lg font-bold">Waste with photos</h3>
-              <p class="mt-2 text-slate-600">Spills, drops, and expired stock get logged with a reason and a picture, so you know where it went.</p>
+              <p class="mt-2 text-slate-600">Built from your par levels, or from what a booked event needs, so every truck leaves with the right amount.</p>
             </article>
             <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <div class="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg></div>
@@ -113,14 +123,19 @@
               <p class="mt-2 text-slate-600">Compare what each shift used with what its sales should have used, and get a flag when it's off.</p>
             </article>
             <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <div class="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg></div>
+              <h3 class="mt-4 text-lg font-bold">Waste with photos</h3>
+              <p class="mt-2 text-slate-600">Spills, drops, and expired stock get logged with a reason and a picture, so you know where it went.</p>
+            </article>
+            <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <div class="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg></div>
               <h3 class="mt-4 text-lg font-bold">Alerts and order lists</h3>
               <p class="mt-2 text-slate-600">Low stock alerts, and order lists ready each morning. Nothing goes to a supplier until a manager approves it.</p>
             </article>
             <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <div class="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg></div>
-              <h3 class="mt-4 text-lg font-bold">Reports that send themselves</h3>
-              <p class="mt-2 text-slate-600">Daily, weekly, and monthly emails. Sales minus costs, waste, free items, and how each driver is doing.</p>
+              <div class="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /><path d="m9 16 2 2 4-4" /></svg></div>
+              <h3 class="mt-4 text-lg font-bold">Expiration dates</h3>
+              <p class="mt-2 text-slate-600">Milk and other dated supplies are used oldest first, with a warning before anything goes bad.</p>
             </article>
             <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <div class="grid size-11 place-items-center rounded-xl bg-brand-50 text-brand-700"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 16h5v5" /></svg></div>
@@ -141,27 +156,104 @@
         </div>
       </section>
 
-      <!-- Who it's for -->
-      <section class="bg-white">
+      <!-- Client bookings -->
+      <section id="bookings" class="bg-white">
+        <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:py-24 lg:grid-cols-2">
+          <div>
+            <p class="font-semibold text-brand-700">Client bookings</p>
+            <h2 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Let clients book your truck online.</h2>
+            <p class="mt-4 text-lg text-slate-600">Schools, parties, weddings, and offices ask for a day and time on your own booking page. You decide.</p>
+            <ul class="mt-6 space-y-3 text-slate-700">
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Your own page to share on your website, social media, or in emails.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Clients pick a day and time. Days you're full are crossed out.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Accept or decline in a tap. The client gets an email either way.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Accepting puts it on the schedule with the truck, driver, crew, manager, on site contact, and what to bring. Everyone on it gets the details.</span></li>
+            </ul>
+          </div>
+          <div class="relative mx-auto w-full max-w-xl">
+            <div class="hidden overflow-hidden rounded-2xl border border-slate-200 shadow-xl sm:mr-16 sm:block">
+              <img src="/shots/desktop-bookings.webp" width="1920" height="1200" loading="lazy" alt="The Bookings screen with two requests waiting, each with the day, time, event, client, and place." class="block w-full" />
+            </div>
+            <div class="mx-auto w-56 overflow-hidden rounded-[2rem] border-[6px] border-slate-900 bg-white shadow-2xl sm:absolute sm:-right-2 sm:-bottom-14 sm:w-36 lg:w-40">
+              <img src="/shots/phone-booking.webp" width="780" height="1688" loading="lazy" alt="A client's booking page on a phone, with a month calendar and start and end times." class="block w-full" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scheduling -->
+      <section id="scheduling" class="bg-slate-50">
+        <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:py-24 lg:grid-cols-2">
+          <div class="order-2 overflow-hidden rounded-2xl border border-slate-200 shadow-xl lg:order-1">
+            <img src="/shots/desktop-schedule.webp" width="1920" height="1200" loading="lazy" alt="The weekly schedule, with each truck's shifts, the Lead and crew, and a booked event." class="block w-full" />
+          </div>
+          <div class="order-1 lg:order-2">
+            <p class="font-semibold text-brand-700">Scheduling</p>
+            <h2 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Everyone knows where to be.</h2>
+            <ul class="mt-6 space-y-3 text-slate-700">
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Plan the week by truck, with a Lead and crew for each shift. Repeat it weekly.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Get a warning when a truck or a person is booked twice.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Drivers see their own shifts, get reminders, and start the shift right from the plan.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Booked events show the address (it opens in maps), who to call on site, and what to bring.</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Budget -->
+      <section id="budget" class="bg-white">
+        <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:py-24 lg:grid-cols-2">
+          <div>
+            <p class="font-semibold text-brand-700">Budget</p>
+            <h2 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">A budget that fills itself in.</h2>
+            <p class="mt-4 text-lg text-slate-600">Plan what you'll spend and earn each month, and see how you're really doing.</p>
+            <ul class="mt-6 space-y-3 text-slate-700">
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Inventory spending comes from your deliveries. Sales and booked events come in as income.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Type in the rest, like fuel, payroll, and repairs, in categories you name.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Link your bank to see balances, or type them in. View only: no money ever moves through the app.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>See the whole year as one sheet, and download it for your accountant.</span></li>
+            </ul>
+          </div>
+          <div class="overflow-hidden rounded-2xl border border-slate-200 shadow-xl">
+            <img src="/shots/desktop-budget.webp" width="1920" height="1200" loading="lazy" alt="The Budget screen: money on hand from a linked bank and a cash box, and money in and out for the month against the budget." class="block w-full" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Reports -->
+      <section id="reports" class="bg-slate-50">
         <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:py-24 lg:grid-cols-2">
           <div class="order-2 overflow-hidden rounded-2xl border border-slate-200 shadow-xl lg:order-1">
             <img src="/shots/desktop-reports.webp" width="1920" height="1200" loading="lazy" alt="The Reports screen: shifts, drinks sold, sales, supplies used, waste, and sales minus costs, with tabs for each report." class="block w-full" />
           </div>
           <div class="order-1 lg:order-2">
-            <h2 class="text-3xl font-extrabold tracking-tight sm:text-4xl">Made for everyone on the team</h2>
-            <div class="mt-8 space-y-6">
-              <div>
-                <h3 class="text-lg font-bold text-brand-700">Owners</h3>
-                <p class="mt-1 text-slate-600">Every truck and warehouse in one place. Sales minus costs, waste, and driver reports, sent to you on schedule.</p>
-              </div>
-              <div>
-                <h3 class="text-lg font-bold text-brand-700">Managers</h3>
-                <p class="mt-1 text-slate-600">Plan shifts and crews, approve orders, recount after a shift, and fix a count with a reason that's kept in the history.</p>
-              </div>
-              <div>
-                <h3 class="text-lg font-bold text-brand-700">Drivers</h3>
-                <p class="mt-1 text-slate-600">Start, count, load, and finish a shift in a few taps, with big buttons made for phones. They only see their own shifts.</p>
-              </div>
+            <p class="font-semibold text-brand-700">Reports</p>
+            <h2 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Reports that send themselves.</h2>
+            <ul class="mt-6 space-y-3 text-slate-700">
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>A morning email, plus daily, weekly, and monthly reports at the hours you pick.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Sales minus costs, waste by reason, free items, and how each driver is doing.</span></li>
+              <li class="flex gap-3"><svg class="icon mt-0.5 text-brand-700" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg><span>Every report downloads as a spreadsheet.</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Who it's for -->
+      <section class="bg-white">
+        <div class="mx-auto max-w-6xl px-4 py-16 md:py-24">
+          <h2 class="text-3xl font-extrabold tracking-tight sm:text-4xl">Made for everyone on the team</h2>
+          <div class="mt-8 grid gap-4 md:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200 p-6">
+              <h3 class="text-lg font-bold text-brand-700">Owners</h3>
+              <p class="mt-2 text-slate-600">Every truck, the warehouse, the budget, and the bookings in one place. Reports show up in your inbox on schedule.</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 p-6">
+              <h3 class="text-lg font-bold text-brand-700">Managers</h3>
+              <p class="mt-2 text-slate-600">Plan shifts, answer booking requests, approve orders, recount after a shift, and fix a count with a reason that's kept in the history.</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 p-6">
+              <h3 class="text-lg font-bold text-brand-700">Drivers</h3>
+              <p class="mt-2 text-slate-600">Start, count, load, and finish a shift in a few taps, with big buttons made for phones. They only see their own shifts.</p>
             </div>
           </div>
         </div>
@@ -180,7 +272,7 @@
             <li class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <span class="grid size-10 place-items-center rounded-full bg-brand-700 font-bold text-white">2</span>
               <h3 class="mt-4 text-lg font-bold">Add your trucks and supplies</h3>
-              <p class="mt-2 text-slate-600">Start from a ready made kit, bring in a spreadsheet, or add them one by one. Name everything your way.</p>
+              <p class="mt-2 text-slate-600">Start from a ready made kit, bring in a spreadsheet, or add them one by one. Turn on scheduling, bookings, and anything else when you're ready.</p>
             </li>
             <li class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <span class="grid size-10 place-items-center rounded-full bg-brand-700 font-bold text-white">3</span>
@@ -196,7 +288,7 @@
         <div class="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-14 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 class="text-3xl font-extrabold tracking-tight text-white">See it with sample data</h2>
-            <p class="mt-3 max-w-xl text-lg text-brand-100">Click around a pretend business as the owner, a manager, or a driver. Nothing you do there is saved.</p>
+            <p class="mt-3 max-w-xl text-lg text-brand-100">Click around a pretend business as the owner, a manager, or a driver. Try the booking page and the budget too. Nothing you do there is saved.</p>
           </div>
           <a href="/demo/" class="btn shrink-0 bg-white text-lg text-brand-800 hover:bg-brand-50">Open the demo</a>
         </div>
@@ -212,20 +304,24 @@
               <p class="mt-3 text-slate-600">No. It runs in the phone's web browser. They can add it to their home screen so it opens like any other app.</p>
             </details>
             <details class="group py-5">
+              <summary class="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">Does any money go through the app?<span class="text-2xl text-slate-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+              <p class="mt-3 text-slate-600">No. Linking a bank only lets you see balances for your budget. Nothing can be paid or moved. Booking requests don't take payment either.</p>
+            </details>
+            <details class="group py-5">
+              <summary class="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">Can my clients book us online?<span class="text-2xl text-slate-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+              <p class="mt-3 text-slate-600">Yes. Turn on your booking page, set the days and hours you take bookings, and share the link. Nothing is booked until you accept it.</p>
+            </details>
+            <details class="group py-5">
               <summary class="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">What if there's no signal at the event?<span class="text-2xl text-slate-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
               <p class="mt-3 text-slate-600">Counts, loads, and waste save on the phone and send by themselves, in order, when signal comes back.</p>
             </details>
             <details class="group py-5">
-              <summary class="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">Do I have to enter sales?<span class="text-2xl text-slate-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-              <p class="mt-3 text-slate-600">No, sales are optional. Drivers can tap in what they sold, or you can upload a sales file from your register. With sales, the app compares what was used with what was sold.</p>
+              <summary class="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">Do I have to use every part?<span class="text-2xl text-slate-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
+              <p class="mt-3 text-slate-600">No. Inventory works on its own. Scheduling, bookings, sales, and count checks are switches you turn on when you want them.</p>
             </details>
             <details class="group py-5">
               <summary class="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">Can other businesses see my numbers?<span class="text-2xl text-slate-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-              <p class="mt-3 text-slate-600">No. Each business only ever sees its own trucks, stock, sales, and people.</p>
-            </details>
-            <details class="group py-5">
-              <summary class="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">Does it work on a computer too?<span class="text-2xl text-slate-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
-              <p class="mt-3 text-slate-600">Yes. Owners and managers get a full computer view with wide tables, reports, and spreadsheet downloads.</p>
+              <p class="mt-3 text-slate-600">No. Each business only ever sees its own trucks, stock, sales, money, and people.</p>
             </details>
             <details class="group py-5">
               <summary class="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">Is it only for one kind of truck?<span class="text-2xl text-slate-400 transition group-open:rotate-45" aria-hidden="true">+</span></summary>
@@ -238,7 +334,7 @@
       <!-- Last call -->
       <section class="bg-slate-50">
         <div class="mx-auto max-w-3xl px-4 py-16 text-center md:py-20">
-          <h2 class="text-3xl font-extrabold tracking-tight sm:text-4xl">Ready to stop guessing?</h2>
+          <h2 class="text-3xl font-extrabold tracking-tight sm:text-4xl">Ready to run it all from one app?</h2>
           <p class="mt-4 text-lg text-slate-600">Set up your trucks today and run your next shift with it.</p>
           <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <a href="https://app.foodtruckim.com/signup" class="btn btn-primary text-lg">Sign up your business</a>

@@ -67,7 +67,7 @@ export function SchedulePage() {
         </button>
         {event && p.status === 'planned' && (
           <details className="mt-1" open={!isManager && mine(p)}>
-            <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-brand-700">
+            <summary className="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-brand-700">
               <Badge tone="blue">Booked event</Badge> Details
             </summary>
             <EventDetails event={event} catalog={catalog.data} name={name} />
