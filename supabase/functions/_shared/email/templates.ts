@@ -174,8 +174,10 @@ const templates: Record<string, (p: Payload, ctx: TemplateContext) => Rendered> 
   },
 
   // Goes to a supplier, outside the business, so it only says what's needed.
-  supplier_order: (p, ctx) =>
-    build(
+  // Replies go to the manager who approved it.
+  supplier_order: (p, ctx) => ({
+    replyTo: typeof p.reply_to === 'string' ? p.reply_to : undefined,
+    ...build(
       ctx,
       `Order from ${p.company_name}`,
       [
@@ -186,6 +188,7 @@ const templates: Record<string, (p: Payload, ctx: TemplateContext) => Rendered> 
         `Questions? Call ${p.company_name}${p.company_phone ? ` at ${p.company_phone}` : ''}${p.approved_by ? ` or ask for ${p.approved_by}` : ''}. Please reply to confirm.`,
       ],
     ),
+  }),
 
   added_to_company: (p, ctx) =>
     build(

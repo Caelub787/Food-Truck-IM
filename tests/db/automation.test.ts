@@ -62,6 +62,8 @@ describe('supplier orders', () => {
     const [mail] = await outbox(s.c.id, 'supplier_order')
     expect(mail?.to_email).toBe('orders@paper.test')
     expect(mail?.payload.lines).toEqual([{ name: 'Cups', amount: '1100' }])
+    const [manager] = await sql<{ email: string }>(`select email from public.profiles where user_id = $1`, [s.manager.id])
+    expect(mail?.payload.reply_to).toBe(manager!.email)
 
     // Still low, but it's already on order, so no new list.
     await job('job_orders', s.c.id)

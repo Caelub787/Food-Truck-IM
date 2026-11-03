@@ -1,7 +1,7 @@
 import nodemailer from 'npm:nodemailer@6'
 import { requireEnv } from '../http.ts'
 
-export type Mail = { to: string; subject: string; text: string; html: string }
+export type Mail = { to: string; subject: string; text: string; html: string; replyTo?: string }
 
 // Which service sends email is a setting, so switching from Gmail to a paid
 // service later (once there's a domain) needs no code changes.
@@ -10,9 +10,12 @@ export type Mail = { to: string; subject: string; text: string; html: string }
 //   EMAIL_PROVIDER=resend Resend HTTPS API
 //   EMAIL_PROVIDER=brevo  Brevo HTTPS API
 //   EMAIL_PROVIDER=log    Print instead of sending (local testing)
+// EMAIL_REPLY_TO (optional) is where replies go when the email doesn't say,
+// like a real inbox when EMAIL_FROM is a no reply address.
 export async function sendMail(mail: Mail): Promise<void> {
   const provider = Deno.env.get('EMAIL_PROVIDER') ?? 'smtp'
   const from = requireEnv('EMAIL_FROM')
+  const replyTo = mail.replyTo || Deno.env.get('EMAIL_REPLY_TO') || undefined
 
   switch (provider) {
     case 'smtp': {
@@ -22,14 +25,14 @@ export async function sendMail(mail: Mail): Promise<void> {
         secure: true,
         auth: { user: requireEnv('SMTP_USER'), pass: requireEnv('SMTP_PASS') },
       })
-      await transport.sendMail({ from, to: mail.to, subject: mail.subject, text: mail.text, html: mail.html })
+      await transport.sendMail({ from, to: mail.to, replyTo, subject: mail.subject, text: mail.text, html: mail.html })
       return
     }
     case 'resend': {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${requireEnv('RESEND_API_KEY')}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to: [mail.to], subject: mail.subject, text: mail.text, html: mail.html }),
+        body: JSON.stringify({ from, to: [mail.to], reply_to: replyTo, subject: mail.subject, text: mail.text, html: mail.html }),
       })
       if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`)
       return
@@ -42,6 +45,7 @@ export async function sendMail(mail: Mail): Promise<void> {
         body: JSON.stringify({
           sender: { name, email },
           to: [{ email: mail.to }],
+          ...(replyTo ? { replyTo: { email: replyTo } } : {}),
           subject: mail.subject,
           textContent: mail.text,
           htmlContent: mail.html,
