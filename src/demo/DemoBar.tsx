@@ -9,6 +9,8 @@ const api = () => (window as unknown as { __foodTruckDemo?: DemoApi }).__foodTru
 // they work, and there's a link to sign up for real.
 const framed = window.top !== window
 const signupUrl = import.meta.env.VITE_SIGNUP_URL as string | undefined
+// The demo lives at /demo on the website, so this goes back to the landing page.
+const homeUrl = import.meta.env.VITE_DEMO_HOME as string | undefined
 
 const roles = [
   { id: 'u-admin', label: 'Sam (admin)' },
@@ -67,6 +69,11 @@ export function DemoBar() {
         >
           Start over
         </button>
+        {homeUrl && (
+          <a href={homeUrl} className="inline-flex min-h-10 items-center rounded-full px-3 font-medium text-violet-800 underline">
+            Back to the website
+          </a>
+        )}
       </div>
     </div>
   )
