@@ -1,6 +1,6 @@
 # Food Truck IM
 
-Inventory, shifts, and usage tracking for food truck businesses. A phone first web app (PWA) that any business can sign up for.
+The all in one app for food truck businesses: inventory (counts, loading, waste, usage vs sales), scheduling, client bookings, budgeting with read only bank balances, and reports. A phone first web app (PWA) that any business can sign up for.
 
 * Website: [foodtruckim.com](https://foodtruckim.com) (with a demo at /demo)
 * App: [app.foodtruckim.com](https://app.foodtruckim.com)

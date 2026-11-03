@@ -15,6 +15,7 @@ You'll use these accounts. Everything except GoDaddy is free, with no credit car
 3. **Cloudflare**: runs your domain's settings (DNS) and puts the website and app online.
 4. **Resend**: sends the app's emails from your domain. Free for 100 emails a day.
 5. **Supabase**: the database, logins, pictures, and live updates.
+6. **Plaid** (optional, Step 12): lets businesses see their bank balances on the Budget page. View only. Its free Trial plan covers up to 10 bank logins.
 
 Screens in these services change now and then. If a button has a slightly different name, look for the closest match.
 
@@ -36,6 +37,8 @@ Open a note on your computer (a password manager is best) and keep these as you 
 | Backup passphrase | Step 4 (you make it up) | GitHub |
 | Cron secret | Step 8 (you make it up) | Supabase, SQL step |
 | Push keys | Step 11 (the app makes them) | Supabase, Cloudflare |
+| Plaid client_id and secret | Step 12 (optional) | Supabase |
+| Bank key | Step 12 (the app makes it) | Supabase |
 
 When this guide says "make up a long password", use only letters and numbers (no symbols), at least 30 of them. Your password manager's "generate password" button works if you turn symbols off.
 
@@ -222,6 +225,8 @@ Only run each one once. If one says something "already exists", it was already d
    * iPhone (Safari): tap **Share**, then **Add to Home Screen**.
    * Android (Chrome): tap the menu (three dots), then **Install app** or **Add to Home screen**.
 6. Set up your business: trucks, supplies (add pictures if you like), products, and people. The starter kits fill in a lot for you. See [GUIDE.md](GUIDE.md).
+7. To let clients book your trucks, open **Business settings**, turn on **Booking page** under **Client bookings**, and press **Save**. Your page is at `https://app.foodtruckim.com/book/` plus the page name shown there. Share that link anywhere.
+8. The **Budget** page works right away with balances you type in. Step 12 adds bank balances.
 
 ## Step 11: Push notifications (optional, 10 minutes)
 
@@ -239,6 +244,29 @@ Push notifications are the alerts that pop up on phones (low stock, reminders, o
 3. In Cloudflare, open the **app** project (**Workers & Pages**, then `foodtruckimapp`), then **Settings**, then **Variables and Secrets**. Press **Add**, name it `VITE_VAPID_PUBLIC_KEY`, paste the public key, and save.
 4. Cloudflare only uses the new key after a fresh build. Go to **Deployments**, and on the newest one press the three dots, then **Retry deployment**. (If you can't find that, any new code going up to GitHub does the same thing.)
 5. On each phone, open **My account** and turn on **Notifications on this device**. On an iPhone, add the app to the home screen first and open it from there, or the switch won't work.
+
+## Step 12: Bank balances on the Budget page (optional, 20 minutes)
+
+This lets each business link its bank and see balances on the Budget page. It's view only: the app can't pay, move, or touch money. Plaid is the service banks trust for this, and its free Trial plan covers up to 10 bank logins across every business using the app. Without this step, the Budget page still works with balances typed in.
+
+1. Go to **dashboard.plaid.com/signup** and make an account. Confirm your email.
+2. If Plaid asks you to pick a plan, pick the free **Trial**. If it asks about your company or how you'll use the data, your business is Food Truck IM, and it's used to show account balances for budgeting.
+3. In the Plaid dashboard, open **Developers**, then **Keys** (it may be under **Team Settings**). Copy the **client_id** and the **Production** secret into your note. (The **Sandbox** secret is for testing with pretend banks. Plaid's test login is `user_good` with password `pass_good`.)
+4. Still under **Developers**, open **API**, find **Allowed redirect URIs**, add `https://app.foodtruckim.com/budget`, and save. Some big banks send people to their own site to log in and then back to this address.
+5. In the app, open **App owner**, scroll down to **Bank link key**, and press **Make a bank key**. Copy it into your note. Make this key only once: if it changes later, every linked bank has to be linked again.
+6. In Supabase, **Edge Functions**, then **Secrets**. Add these:
+
+   | Name | Value |
+   |---|---|
+   | `PLAID_CLIENT_ID` | your Plaid client_id |
+   | `PLAID_SECRET` | your Plaid Production secret |
+   | `PLAID_ENV` | `production` (or `sandbox` with the Sandbox secret, to test first) |
+   | `PLAID_REDIRECT_URI` | `https://app.foodtruckim.com/budget` |
+   | `BANK_TOKEN_KEY` | the bank key from the app |
+
+7. Open **Budget** in the app. You'll see **Link a bank**. Press it, pick your bank, and log in. That login happens in Plaid's window, never in this app. The balances show up on the Budget page and update when the page opens.
+
+Some big banks (like Chase) need a few extra days of approval inside Plaid before they can be linked. Plaid's dashboard shows a checklist for that. Other banks work right away.
 
 ## Backups
 
@@ -258,6 +286,9 @@ If the repository is public, GitHub stops timed runs after 60 days with no new c
 * **The project is paused**: free Supabase projects pause after about a week with nobody using them, and Supabase emails you first. Open the project in Supabase and press **Restore**. Nothing is lost.
 * **No reports or alerts**: check you ran `3-jobs-timer.sql` (Step 9). Reports go out at the hours in **Business settings**, in the business's time zone. Each person picks what they get in **My account**.
 * **No push notifications**: check Step 11, and that the phone allowed notifications for the app. The `outbox` table shows each one and any error.
+* **"Link a bank" doesn't show on the Budget page**: one of the Step 12 secrets is missing. All of `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `BANK_TOKEN_KEY` are needed.
+* **A bank says "Needs a new login"**: banks ask for this now and then. Press **Log in again** on the Budget page.
+* **Nobody can find the booking page**: check **Booking page** is on in **Business settings**, and share the address shown there.
 
 ## When you outgrow the free plans
 

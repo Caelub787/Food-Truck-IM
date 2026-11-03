@@ -7,7 +7,7 @@ const b64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replac
 /**
  * Makes the keys push notifications need, right here in the browser. They're
  * never sent anywhere: the owner copies them into Supabase and Cloudflare (see
- * docs/SETUP.md, Step 8).
+ * docs/SETUP.md, the push notifications step).
  */
 export function PushKeysCard() {
   const [keys, setKeys] = useState<{ publicKey: string; privateKey: string } | null>(null)
@@ -29,7 +29,7 @@ export function PushKeysCard() {
       {pushKey ? (
         <p className="mt-1 text-slate-600">Push notifications are set up. Only make new keys if the old private key got out.</p>
       ) : (
-        <p className="mt-1 text-slate-600">Push notifications need two keys. Make them here, then follow Step 8 in docs/SETUP.md.</p>
+        <p className="mt-1 text-slate-600">Push notifications need two keys. Make them here, then follow the push notifications step in docs/SETUP.md.</p>
       )}
       {keys ? (
         <div className="mt-3 space-y-3">

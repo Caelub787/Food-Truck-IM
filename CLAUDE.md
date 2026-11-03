@@ -11,7 +11,7 @@ Project rules for Food Truck IM (Food Truck Inventory Management). Read this fir
 
 ## What this app is
 
-A phone first PWA for food truck businesses (any business can sign up, not just Kona Ice and Toms Coffee). Owners, managers, and drivers track warehouse and truck inventory, shifts, waste, and sales. It should run itself: people only enter what the app can't know (physical counts, loads, waste, optional sales counts). Reports, alerts, reminders, order lists, par suggestions, and flags happen automatically.
+A phone first PWA for food truck businesses (any business can sign up, not just Kona Ice and Toms Coffee). A one stop shop: inventory (the main selling point), shifts, waste, sales, scheduling, client bookings, budgeting, and reports. Owners, managers, and drivers track warehouse and truck inventory, shifts, waste, and sales. It should run itself: people only enter what the app can't know (physical counts, loads, waste, optional sales counts). Reports, alerts, reminders, order lists, par suggestions, and flags happen automatically.
 
 Build it for any business:
 * Every list is named by the business (truck types, units, categories, waste reasons, free drink reasons, checklists).
@@ -99,6 +99,18 @@ The website has its own check: `scripts/site-screens.cjs` (phone and desktop scr
 * Admins do everything. Managers do everything except company settings, locations, and admin or manager accounts. Drivers only work shifts they are on and only see those shifts.
 * On a shift: one Lead and any number of Crew. Everyone on the shift can enter counts, waste, and sales. Only the Lead confirms inventory and finishes the shift.
 
+## Client bookings
+
+* Each business can turn on a public booking page at `/book/<booking_slug>`. `public.booking_page` and `public.request_booking` are the only functions logged out visitors can run (the rules test lists them). They check everything, stop robots with a hidden box, and limit requests per email and per day. Never show who or where on the public page, only busy times.
+* Accepting a booking creates a schedule plan through `save_schedule` and saves the details on the booking (truck, manager, contact, notes, price) and `booking_supplies`. The Lead and crew live on the schedule. Booked plans are changed from the booking, not the plan.
+* Clients get emails from the business's name with replies to the person who decided. Staff get `booking_staff` emails (pref `assignment_email`) and pushes.
+
+## Budget and bank balances
+
+* Admins see the budget. Managers only when `company_settings.budget_managers` is on (`app.can_budget()`, as restrictive policies on every budget table).
+* Inventory, sales, and events actuals are worked out in `public.budget_year`, never stored, so they can't drift.
+* Bank links are read only. No feature may ever move money. Plaid access tokens are locked with AES GCM (`BANK_TOKEN_KEY`, an Edge Function secret) and kept in `app.bank_connections`, which the app can't reach. Only the `bank` Edge Function uses them, through `service_bank_*` functions, after checking the caller can see the budget. Bank rows in `money_accounts` can't be changed from the app.
+
 ## Company status
 
 `pending` (just signed up, can do setup, can't invite or send email), `active`, `declined`, `suspended`. Declined and suspended companies get no data access. Only the App Owner changes status.
@@ -175,3 +187,5 @@ Phases from `docs/PLAN.md`:
 10. Square: waiting on the owner
 
 Added after: pictures on supplies (optional, shrunk to about 40 KB on the phone, shown on lists, counts, and loading). The foodtruckim.com website with a public demo. Email replies go to the right person.
+11. Client bookings: built and tested locally (public booking page, accept or decline with crew, manager, contact, and supplies, events on the schedule and shift, emails to clients and staff).
+12. Budget: built and tested locally (categories, monthly budgets, typed in spending, auto actuals from deliveries, sales, and events, year sheet with CSV, money accounts typed in or read only through Plaid).
