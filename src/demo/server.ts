@@ -151,6 +151,12 @@ function visible(table: string, rows: Row[]) {
       return rows.filter((r) => myPlans.has(r.id))
     case 'schedule_crew':
       return rows.filter((r) => myPlans.has(r.schedule_id))
+    case 'bookings':
+      return rows.filter((r) => r.schedule_id && myPlans.has(r.schedule_id))
+    case 'booking_supplies': {
+      const mineBooked = new Set(db.bookings!.filter((b) => b.schedule_id && myPlans.has(b.schedule_id)).map((b) => b.id))
+      return rows.filter((r) => mineBooked.has(r.booking_id))
+    }
     case 'flags':
     case 'suppliers':
     case 'purchase_orders':
@@ -324,7 +330,84 @@ function finishShift(s: Row) {
 // Database functions ------------------------------------------------------------------------------
 
 type P = Row
+// Bookings: the business's time zone decides what "12:00 on May 9" means.
+const ZONE = 'America/Chicago'
+const zoneDate = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: ZONE }).format(d)
+function zonedIso(date: string, time: string) {
+  const [y, m, d] = date.split('-').map(Number)
+  const [h, mi] = time.split(':').map(Number)
+  const guess = Date.UTC(y!, m! - 1, d!, h!, mi!)
+  const shown = new Date(new Date(guess).toLocaleString('en-US', { timeZone: ZONE })).getTime()
+  const utcShown = new Date(new Date(guess).toLocaleString('en-US', { timeZone: 'UTC' })).getTime()
+  return new Date(guess + (utcShown - shown)).toISOString()
+}
+const addDay = (date: string, n: number) => new Date(Date.parse(`${date}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10)
+
+function saveBookingDetails(b: Row, p: P) {
+  if (!p.lead_id) throw new Error('Pick a Lead for the event.')
+  const [sid] = rpcs.save_schedule!({
+    p: {
+      id: b.schedule_id, truck_id: p.truck_id, starts_at: p.starts_at ?? b.starts_at, ends_at: p.ends_at ?? b.ends_at,
+      event_name: p.event_name || b.event_name || b.organization || b.client_name, place: p.place || b.place, notes: p.crew_notes, lead_id: p.lead_id,
+      crew_ids: p.crew_ids ?? [],
+    },
+  })
+  Object.assign(b, {
+    starts_at: p.starts_at ?? b.starts_at, ends_at: p.ends_at ?? b.ends_at, schedule_id: sid, truck_id: p.truck_id, manager_id: p.manager_id || null,
+    event_name: p.event_name || b.event_name, place: p.place || b.place, contact_name: p.contact_name || null, contact_phone: p.contact_phone || null,
+    crew_notes: p.crew_notes || null, price: p.price ?? null,
+  })
+  db.booking_supplies = db.booking_supplies!.filter((l) => l.booking_id !== b.id)
+  for (const l of p.supplies ?? []) if (l.quantity > 0) db.booking_supplies.push({ booking_id: b.id, supply_id: l.supply_id, quantity: l.quantity })
+}
+
 const rpcs: Record<string, (a: P) => [unknown, string[]?]> = {
+  booking_page: ({ p_slug }) => {
+    const st = db.company_settings![0]!
+    if (!st.bookings_enabled || p_slug !== st.booking_slug) return [null]
+    const c = db.companies![0]!
+    const today = zoneDate(new Date())
+    const first = addDay(today, st.booking_notice_days)
+    const last = addDay(today, st.booking_ahead_days)
+    const busy = db.schedules!.filter((x) => x.status === 'planned' && zoneDate(new Date(x.ends_at)) >= first).map((x) => ({ starts_at: x.starts_at, ends_at: x.ends_at }))
+    return [{
+      name: c.name, phone: c.phone, timezone: ZONE, intro: st.booking_intro, days: st.booking_days, open: st.booking_open.slice(0, 5),
+      close: st.booking_close.slice(0, 5), first_day: first, last_day: last, capacity: st.booking_capacity ?? db.trucks!.filter((t) => t.active).length, busy,
+    }]
+  },
+  request_booking: ({ p }) => {
+    if (p.website) return [{ ok: true }]
+    if (!p.date || !p.start || !p.end) throw new Error('Pick a day and a start and end time.')
+    if (!String(p.name ?? '').trim()) throw new Error('Please enter your name.')
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(p.email ?? '').trim())) throw new Error('Please enter a real email address, so they can get back to you.')
+    if (!String(p.place ?? '').trim()) throw new Error('Please enter where the event is.')
+    db.bookings!.unshift({
+      id: id(), status: 'pending', starts_at: zonedIso(p.date, p.start), ends_at: zonedIso(p.date, p.end), client_name: p.name.trim(),
+      client_email: p.email.trim().toLowerCase(), client_phone: p.phone || null, organization: p.organization || null, event_name: p.event_name || null,
+      place: p.place.trim(), guests: /^\d+$/.test(p.guests ?? '') ? Number(p.guests) : null, client_notes: p.notes || null, truck_id: null,
+      manager_id: null, schedule_id: null, contact_name: null, contact_phone: null, crew_notes: null, price: null, decision_message: null,
+      decided_by: null, decided_at: null, created_at: now(),
+    })
+    return [{ ok: true }, ['bookings']]
+  },
+  decide_booking: ({ p }) => {
+    const b = db.bookings!.find((x) => x.id === p.booking_id)!
+    if (b.status !== 'pending') throw new Error('This booking was already answered.')
+    if (p.action === 'accept') saveBookingDetails(b, p)
+    Object.assign(b, { status: p.action === 'accept' ? 'accepted' : 'declined', decision_message: p.message || null, decided_by: userId, decided_at: now() })
+    return [null, ['bookings', 'booking_supplies', 'schedules', 'schedule_crew']]
+  },
+  update_booking: ({ p }) => {
+    saveBookingDetails(db.bookings!.find((x) => x.id === p.booking_id)!, p)
+    return [null, ['bookings', 'booking_supplies', 'schedules', 'schedule_crew']]
+  },
+  cancel_booking: ({ p_booking_id, p_message }) => {
+    const b = db.bookings!.find((x) => x.id === p_booking_id)!
+    Object.assign(b, { status: 'cancelled', decision_message: p_message || b.decision_message, decided_by: userId, decided_at: now() })
+    const plan = db.schedules!.find((x) => x.id === b.schedule_id)
+    if (plan) plan.status = 'cancelled'
+    return [null, ['bookings', 'schedules']]
+  },
   my_context: () => {
     const c = db.companies![0]!
     const p = me()

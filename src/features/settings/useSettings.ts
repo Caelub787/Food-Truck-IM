@@ -28,6 +28,16 @@ export type Settings = {
   count_check_reminder_hours: number
   waste_pattern_factor: number
   photo_retention_days: number
+  bookings_enabled: boolean
+  booking_slug: string | null
+  booking_intro: string | null
+  booking_days: number[]
+  /** "08:00:00" */
+  booking_open: string
+  booking_close: string
+  booking_notice_days: number
+  booking_ahead_days: number
+  booking_capacity: number | null
 }
 
 /** The business's settings and feature switches, kept live. */

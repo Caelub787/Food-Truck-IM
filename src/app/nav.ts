@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, Boxes, Building2, CalendarDays, Home, MoreHorizontal, Receipt, Settings2, ShieldCheck, Truck, UserRound, Users, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, BarChart3, Boxes, Building2, CalendarCheck, CalendarDays, Home, MoreHorizontal, Receipt, Settings2, ShieldCheck, Truck, UserRound, Users, type LucideIcon } from 'lucide-react'
 import type { Me } from '@/features/auth/session'
 import type { Settings } from '@/features/settings/useSettings'
 import type { Role } from '@/lib/config'
@@ -20,6 +20,7 @@ const items: NavItem[] = [
   { to: '/', label: 'Home', short: 'Home', icon: Home },
   { to: '/shifts', label: 'Shifts', short: 'Shifts', icon: Truck },
   { to: '/schedule', label: 'Schedule', short: 'Schedule', icon: CalendarDays, feature: 'scheduling_enabled' },
+  { to: '/bookings', label: 'Bookings', short: 'Bookings', icon: CalendarCheck, roles: ['admin', 'manager'], feature: 'bookings_enabled' },
   { to: '/inventory', label: 'Inventory', short: 'Stock', icon: Boxes, roles: ['admin', 'manager'] },
   { to: '/sales', label: 'Sales', short: 'Sales', icon: Receipt, roles: ['admin', 'manager'] },
   { to: '/reports', label: 'Reports', short: 'Reports', icon: BarChart3, roles: ['admin', 'manager'] },

@@ -4,6 +4,8 @@ import { CheckEmailPage } from '@/features/auth/CheckEmailPage'
 import { ConfirmPage } from '@/features/auth/ConfirmPage'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
 import { RequireMember, RequireOwner, RequireRole, RequireSession } from '@/features/auth/guards'
+import { BookingPage } from '@/features/bookings/BookingPage'
+import { BookingsPage } from '@/features/bookings/BookingsPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { SetPasswordPage } from '@/features/auth/SetPasswordPage'
 import { SignUpPage } from '@/features/auth/SignUpPage'
@@ -47,6 +49,8 @@ const routes: RouteObject[] = [
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/auth/confirm', element: <ConfirmPage /> },
   { path: '/set-password', element: <SetPasswordPage /> },
+  // A business's public booking page, for its clients. No login.
+  { path: '/book/:slug', element: <BookingPage /> },
   {
     element: <RequireSession />,
     children: [
@@ -67,6 +71,7 @@ const routes: RouteObject[] = [
                 element: <RequireRole roles={['admin', 'manager']} />,
                 children: [
                   { path: 'people', element: <PeoplePage /> },
+                  { path: 'bookings', element: <BookingsPage /> },
                   { path: 'inventory', element: <InventoryPage /> },
                   { path: 'inventory/receive', element: <ReceivePage /> },
                   { path: 'inventory/count', element: <CountPage /> },

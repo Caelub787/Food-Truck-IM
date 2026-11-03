@@ -2,6 +2,7 @@ import { CheckCircle2, Circle, Smartphone } from 'lucide-react'
 import { Link, Navigate, useNavigate } from 'react-router'
 import { Button, Card } from '@/components/ui'
 import { useMeLoaded, type Me } from '@/features/auth/session'
+import { RequestsCard } from '@/features/bookings/RequestsCard'
 import { FlagsCard } from '@/features/flags/FlagsCard'
 import { useSetupProgress } from '@/features/setup/useSetupProgress'
 import { UpcomingCard } from '@/features/schedule/UpcomingCard'
@@ -27,6 +28,7 @@ export function HomePage() {
         ) : (
           <>
             <GettingStarted me={me} />
+            <RequestsCard />
             <FlagsCard />
             <CountChecksCard />
             <UpcomingCard />

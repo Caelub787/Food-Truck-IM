@@ -24,8 +24,10 @@ export function LoadStep({ ctx }: { ctx: ShiftCtx }) {
   const [done, setDone] = useState<string | null>(null)
 
   const pars = ctx.pars.filter((p) => p.truck_id === shift.truck_id && Number(p.par_quantity) > 0)
-  const parOf = (id: string) => Number(pars.find((p) => p.supply_id === id)?.par_quantity ?? 0)
-  const ids = new Set([...pars.map((p) => p.supply_id), ...ctx.supplyIds, ...added])
+  const truckPar = (id: string) => Number(pars.find((p) => p.supply_id === id)?.par_quantity ?? 0)
+  // A booked event can need more than the usual par. The load fills up to whichever is more.
+  const parOf = (id: string) => Math.max(truckPar(id), ctx.eventNeeds.get(id) ?? 0)
+  const ids = new Set([...pars.map((p) => p.supply_id), ...ctx.eventNeeds.keys(), ...ctx.supplyIds, ...added])
   const supplies = sortSupplies(c, ids)
   const addable = c.supplies
     .filter((s) => s.active && !ids.has(s.id))
@@ -67,7 +69,9 @@ export function LoadStep({ ctx }: { ctx: ShiftCtx }) {
     <div className="space-y-4">
       {open && (
         <>
-          {pars.length === 0 ? (
+          {ctx.eventNeeds.size > 0 ? (
+            <Notice>Amounts are filled in for what this booked event needs, or the truck's par levels if those are more. Change anything you load differently.</Notice>
+          ) : pars.length === 0 ? (
             <Notice>
               This truck has no par levels yet, so nothing is filled in. A manager can set them in Setup, under Trucks. Enter what you're loading
               below.
@@ -97,7 +101,7 @@ export function LoadStep({ ctx }: { ctx: ShiftCtx }) {
               return (
                 <>
                   On truck {formatAmount(ctx.onTruck(s.id), unit)}
-                  {par > 0 && <> · par {formatAmount(par, unit)}</>}
+                  {ctx.eventNeeds.has(s.id) ? <> · event needs {formatAmount(ctx.eventNeeds.get(s.id)!, unit)}</> : par > 0 && <> · par {formatAmount(par, unit)}</>}
                   <br />
                   <span className={(amount(s.id) ?? 0) > inStock ? 'font-medium text-amber-700' : ''}>
                     {ctx.locations.find((l) => l.id === from)?.name ?? 'Warehouse'} has {formatAmount(inStock, unit)}

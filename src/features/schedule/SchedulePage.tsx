@@ -3,8 +3,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Badge, Button, PageHeader, Spinner } from '@/components/ui'
 import { useMeLoaded } from '@/features/auth/session'
+import { useEvents } from '@/features/bookings/data'
+import { EventDetails } from '@/features/bookings/EventDetails'
 import { usePeopleNames } from '@/features/inventory/data'
-import { useTrucks } from '@/features/setup/data'
+import { useSupplyCatalog, useTrucks } from '@/features/setup/data'
 import { useShifts } from '@/features/shifts/data'
 import { addDays, timeText, usePlans, weekStart, type Plan } from './data'
 import { PlanSheet } from './PlanSheet'
@@ -22,7 +24,9 @@ export function SchedulePage() {
   const plans = usePlans(start, end)
   const shifts = useShifts({ since: addDays(start, -1).toISOString(), limit: 300 })
   const trucks = useTrucks()
+  const catalog = useSupplyCatalog()
   const name = usePeopleNames()
+  const events = useEvents((plans.data ?? []).map((p) => p.id))
   const [editing, setEditing] = useState<{ id: string | null; day: Date } | null>(null)
   const [today] = useState(() => new Date().toDateString())
 
@@ -36,6 +40,7 @@ export function SchedulePage() {
     const shift = started(p)
     const isToday = new Date(p.starts_at).toDateString() === today
     const crewNames = p.crew.map(name).filter(Boolean)
+    const event = events[p.id]
     return (
       <div
         key={p.id}
@@ -44,7 +49,8 @@ export function SchedulePage() {
         <button
           type="button"
           disabled={!isManager}
-          onClick={() => setEditing({ id: p.id, day: new Date(p.starts_at) })}
+          // Booked events are changed from the booking, so the client's details stay with them.
+          onClick={() => (event ? navigate(`/bookings?open=${event.booking.id}`) : setEditing({ id: p.id, day: new Date(p.starts_at) }))}
           className="w-full text-left disabled:cursor-default"
         >
           <p className={`font-semibold ${p.status === 'cancelled' ? 'line-through' : ''}`}>
@@ -57,8 +63,16 @@ export function SchedulePage() {
             {p.lead_id ? `Lead: ${name(p.lead_id)}` : 'No Lead yet'}
             {crewNames.length > 0 && ` · ${crewNames.join(', ')}`}
           </p>
-          {p.notes && <p className="mt-1 text-sm text-slate-500">{p.notes}</p>}
+          {p.notes && !event && <p className="mt-1 text-sm text-slate-500">{p.notes}</p>}
         </button>
+        {event && p.status === 'planned' && (
+          <details className="mt-1" open={!isManager && mine(p)}>
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-brand-700">
+              <Badge tone="blue">Booked event</Badge> Details
+            </summary>
+            <EventDetails event={event} catalog={catalog.data} name={name} />
+          </details>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {p.status === 'cancelled' && <Badge>Cancelled</Badge>}
           {shift && (

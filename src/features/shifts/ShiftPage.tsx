@@ -4,6 +4,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { ConfirmButton } from '@/components/ConfirmButton'
 import { Badge, Button, Card, Notice, Spinner } from '@/components/ui'
 import { useMeLoaded } from '@/features/auth/session'
+import { useEvents } from '@/features/bookings/data'
+import { EventDetails } from '@/features/bookings/EventDetails'
 import { usePeopleNames, useStockLevels } from '@/features/inventory/data'
 import { useShiftSales } from '@/features/sales/data'
 import { useSettings } from '@/features/settings/useSettings'
@@ -52,6 +54,7 @@ export function ShiftPage() {
   const locations = useLocations()
   const settings = useSettings()
   const name = usePeopleNames()
+  const events = useEvents([shift.data?.schedule_id])
   const [crewOpen, setCrewOpen] = useState(false)
   const cancel = useAction(async () => {
     await rpc('cancel_shift', { p_shift_id: id })
@@ -94,7 +97,9 @@ export function ShiftPage() {
     supplyIds: shiftSupplyIds({ truckId: s.truck_id, levels: levels.data, counts: counts.data, moves: moves.data, pars: pars.data }),
     onTruck: (supplyId) => levelAt(s.truck_id, supplyId),
     at: levelAt,
+    eventNeeds: new Map((s.schedule_id ? events[s.schedule_id]?.supplies : undefined)?.map((l) => [l.supply_id, Number(l.quantity)]) ?? []),
   }
+  const event = s.schedule_id ? events[s.schedule_id] : undefined
 
   const stage = shiftStage(s)
   const loads = moves.data.filter((m) => m.kind === 'load').length
@@ -153,6 +158,18 @@ export function ShiftPage() {
         )}
       </div>
       {cancel.error && <Notice tone="error">{cancel.error}</Notice>}
+      {event && (
+        <Card className="mb-4">
+          <details open={s.status === 'open'}>
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold">
+              <Badge tone="blue">Booked event</Badge> {event.booking.event_name || event.booking.organization || 'Event details'}
+            </summary>
+            <div className="mt-2">
+              <EventDetails event={event} catalog={catalog.data} name={name} />
+            </div>
+          </details>
+        </Card>
+      )}
 
       <div className="grid items-start gap-4 lg:grid-cols-[15rem_1fr]">
         <nav aria-label="Shift steps" className="-mx-4 overflow-x-auto px-4 lg:sticky lg:top-8 lg:mx-0 lg:px-0">

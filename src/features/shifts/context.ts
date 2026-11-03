@@ -30,4 +30,6 @@ export type ShiftCtx = {
   onTruck: (supplyId: string) => number
   /** Stock at a place right now, in base units. */
   at: (placeId: string, supplyId: string) => number
+  /** What the booked event on this shift needs, by supply, in base units. */
+  eventNeeds: Map<string, number>
 }

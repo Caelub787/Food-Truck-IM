@@ -7,10 +7,14 @@ import { refreshTables, useLiveQuery } from '@/lib/live'
 import { currentPush, pushKey, pushSupported, turnOffPush, turnOnPush } from '@/lib/push'
 import { supabase } from '@/lib/supabase'
 
-type Prefs = Record<'daily_email' | 'weekly_email' | 'monthly_email' | 'morning_email' | 'alert_email' | 'alert_push' | 'reminder_push', boolean | null>
+type Prefs = Record<
+  'daily_email' | 'weekly_email' | 'monthly_email' | 'morning_email' | 'alert_email' | 'alert_push' | 'reminder_push' | 'assignment_email',
+  boolean | null
+>
 
 const options: { key: keyof Prefs; label: string; hint: string; roles: string[] }[] = [
   { key: 'reminder_push', label: 'Shift reminders', hint: 'When a planned shift should start, or a shift is still open.', roles: ['admin', 'manager', 'driver'] },
+  { key: 'assignment_email', label: 'Event emails', hint: "When you're put on a booked event, or it changes. With the address, contact, and what to bring.", roles: ['admin', 'manager', 'driver'] },
   { key: 'alert_push', label: 'Alerts as notifications', hint: 'Low stock, order lists, things that look off.', roles: ['admin', 'manager'] },
   { key: 'alert_email', label: 'Alerts by email too', hint: 'The same alerts, in your inbox.', roles: ['admin', 'manager'] },
   { key: 'morning_email', label: 'Morning email', hint: "What's low, expiring, or waiting for you.", roles: ['admin', 'manager'] },
@@ -21,9 +25,9 @@ const options: { key: keyof Prefs; label: string; hint: string; roles: string[] 
 
 // What each role gets when they haven't chosen (matches app.recipients).
 const defaults: Record<string, (keyof Prefs)[]> = {
-  admin: ['reminder_push', 'alert_push', 'morning_email', 'daily_email', 'weekly_email', 'monthly_email'],
-  manager: ['reminder_push', 'alert_push', 'morning_email', 'daily_email', 'weekly_email'],
-  driver: ['reminder_push'],
+  admin: ['reminder_push', 'assignment_email', 'alert_push', 'morning_email', 'daily_email', 'weekly_email', 'monthly_email'],
+  manager: ['reminder_push', 'assignment_email', 'alert_push', 'morning_email', 'daily_email', 'weekly_email'],
+  driver: ['reminder_push', 'assignment_email'],
 }
 
 /** Which emails and notifications this person gets, and push on this device. */

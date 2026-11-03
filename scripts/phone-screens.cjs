@@ -9,7 +9,7 @@
 // Screenshots land in test-results/screens. The script exits with an error if a check fails.
 const { chromium } = require('playwright')
 const path = require('node:path')
-const { setupTables, addShiftData, addSalesData, addPlanData, addReportData } = require('./mock-data.cjs')
+const { setupTables, addShiftData, addSalesData, addPlanData, addReportData, addBookingData } = require('./mock-data.cjs')
 
 const OUT = process.env.OUT ?? path.join(__dirname, '../test-results/screens')
 const base = process.env.BASE_URL ?? 'http://localhost:4173'
@@ -583,6 +583,90 @@ async function runSales(browser, size, label) {
   return { checks, errors }
 }
 
+async function runBookings(browser, size, label) {
+  const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
+  addShiftData(state)
+  addPlanData(state)
+  addBookingData(state)
+  const checks = []
+
+  // A client asks for a truck on the public booking page.
+  await page.goto(`${base}/book/island-ice-co`)
+  await page.getByRole('heading', { name: 'Island Ice Co' }).waitFor()
+  await shot('100-booking-page')
+  await page.getByRole('grid', { name: 'Days' }).getByRole('button', { disabled: false }).first().click()
+  await page.getByLabel('Start', { exact: true }).selectOption('12:00')
+  await page.getByLabel('End', { exact: true }).selectOption('15:00')
+  await page.getByLabel('Your name').fill('Kim Park')
+  await page.getByLabel('Email', { exact: true }).fill('kim@example.com')
+  await page.getByLabel('Where is it?').fill('5 Pine St')
+  await shot('101-booking-filled')
+  await page.getByRole('button', { name: 'Send request' }).click()
+  await page.getByRole('heading', { name: 'Request sent!' }).waitFor()
+  const asked = state.lastBooking
+  if (asked?.p_slug !== 'island-ice-co' || asked.p.start !== '12:00' || asked.p.end !== '15:00' || asked.p.website !== '' || !asked.p.date) {
+    throw new Error(`booking request not sent right: ${JSON.stringify(asked)}`)
+  }
+  await shot('102-booking-sent')
+  checks.push('clients ask for a day and time on the booking page')
+
+  // Maria sees requests on her home screen and the Bookings page, and new ones arrive live.
+  state.me.user_id = 'u-m1'
+  state.me.profile = { full_name: 'Maria Lopez', role: 'manager', active: true, phone: null, joined_at: '2026-10-02' }
+  await page.goto(`${base}/`)
+  await seen('1 booking request waiting').waitFor()
+  await page.goto(`${base}/bookings`)
+  await seen('Summer block party').waitFor()
+  await shot('103-bookings')
+  await markPage(page)
+  state.tables.bookings.push({ ...state.tables.bookings[0], id: 'bk-live', event_name: 'Wedding reception' })
+  live.signal('company:c1', 'bookings')
+  await seen('Wedding reception').waitFor({ timeout: 3000 })
+  await assertNoReload(page, 'new booking request')
+  checks.push('new requests show up live')
+
+  // She accepts one: Jake leads, and they bring 8 sleeves of cups.
+  await seen('Summer block party').click()
+  await page.getByRole('button', { name: 'Accept', exact: true }).click()
+  await page.getByLabel('Lead', { exact: true }).selectOption({ label: 'Jake Turner' })
+  await page.getByRole('button', { name: 'Add a line' }).click()
+  await page.getByLabel('Supply', { exact: true }).last().selectOption({ label: 'Small shaved ice cup' })
+  await page.getByLabel('Amount', { exact: true }).last().fill('8')
+  await shot('104-accept')
+  await page.getByRole('button', { name: 'Accept and tell everyone' }).click()
+  for (let i = 0; i < 30 && !state.lastDecision; i++) await page.waitForTimeout(100)
+  const d = state.lastDecision
+  if (d?.action !== 'accept' || d.lead_id !== 'u-d1' || d.supplies?.[0]?.supply_id !== 's-cup-s' || d.supplies[0].quantity !== 400) {
+    throw new Error(`booking not accepted right: ${JSON.stringify(d)}`)
+  }
+  checks.push('managers accept with the crew and what to bring')
+
+  // Jake sees the booked event on today's shift and on the schedule.
+  state.me.user_id = 'u-d1'
+  state.me.profile = { full_name: 'Jake Turner', role: 'driver', active: true, phone: null, joined_at: '2026-10-03' }
+  await page.goto(`${base}/shifts/sh-1`)
+  await seen('Booked event').waitFor()
+  await seen('Park by gate B.').waitFor()
+  await seen('Bring for this event').waitFor()
+  await shot('105-shift-event')
+  await page.goto(`${base}/schedule`)
+  await seen('Booked event').waitFor()
+  await shot('106-schedule-event')
+  checks.push('the crew sees the event, the contact, and what to bring')
+
+  // Sam turns the booking page on and names it in Business settings.
+  state.me.user_id = user.id
+  state.me.profile = { full_name: 'Sam Rivera', role: 'admin', active: true, phone: null, joined_at: '2026-10-01' }
+  await page.goto(`${base}/settings`)
+  await page.getByLabel('Page name').waitFor()
+  await page.getByLabel('Page name').scrollIntoViewIfNeeded()
+  await shot('107-booking-settings')
+  checks.push('booking page settings open')
+
+  await context.close()
+  return { checks, errors }
+}
+
 async function runPlans(browser, size, label) {
   const { state, context, page, live, errors, shot, seen } = await openAsAdmin(browser, size, label)
   addShiftData(state)
@@ -753,7 +837,7 @@ async function runInventory(browser, size, label) {
     ['phone', { width: 390, height: 844 }],
     ['desktop', { width: 1366, height: 860 }],
   ]) {
-    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift, runSales, runPlans, runReports })[n]) : [run, runSetup, runInventory, runShift, runSales, runPlans, runReports])) {
+    for (const flow of (process.env.FLOWS ? process.env.FLOWS.split(',').map((n) => ({ run, runSetup, runInventory, runShift, runSales, runPlans, runReports, runBookings })[n]) : [run, runSetup, runInventory, runShift, runSales, runPlans, runReports, runBookings])) {
       const { checks, errors } = await flow(browser, size, label)
       console.log(`${label} ${flow.name}: ${checks.length} checks passed: ${checks.join('; ')}`)
       if (errors.length) {

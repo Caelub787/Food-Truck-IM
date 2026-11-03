@@ -33,6 +33,9 @@ export function seed(): Db {
       diff_percent: 10, diff_min_dollars: 2, shift_dollar_limit: 25, par_cushion_percent: 25, par_lookback_shifts: 10, par_auto_update: false,
       expiration_warning_days: 3, morning_hour: 6, daily_report_hour: 20, weekly_report_day: 1, summary_hour: 7, start_reminder_minutes: 30,
       shift_reminder_hours: 12, shift_alert_hours: 16, count_check_reminder_hours: 18, waste_pattern_factor: 1.5, photo_retention_days: 180,
+      bookings_enabled: true, booking_slug: 'island-ice-co',
+      booking_intro: 'We bring shaved ice and coffee to schools, parties, and events around town. Pick a day and tell us about it!',
+      booking_days: [0, 3, 4, 5, 6], booking_open: '10:00:00', booking_close: '21:00:00', booking_notice_days: 2, booking_ahead_days: 120, booking_capacity: null,
     },
   ]
   t.locations = [
@@ -198,7 +201,45 @@ export function seed(): Db {
     { id: 'pl-2', truck_id: 'tr-1', starts_at: at(1, 12), ends_at: at(1, 20), event_name: 'Ball game', place: 'Riverside Park', notes: null, lead_id: 'u-d1', status: 'planned', series_id: 'ser-1' },
     { id: 'pl-3', truck_id: 'tr-2', starts_at: at(2, 11), ends_at: at(2, 18), event_name: null, place: null, notes: 'Bring extra cups', lead_id: 'u-d2', status: 'planned', series_id: null },
   ]
-  t.schedule_crew = [{ schedule_id: 'pl-2', user_id: 'u-d2' }]
+  t.schedules.push({
+    id: 'pl-4', truck_id: 'tr-1', starts_at: at(4, 11), ends_at: at(4, 15), event_name: 'Field day', place: '400 Lincoln Ave',
+    notes: 'Park by the gym doors. Check in at the front office.', lead_id: 'u-d1', status: 'planned', series_id: null,
+  })
+  t.schedule_crew = [{ schedule_id: 'pl-2', user_id: 'u-d2' }, { schedule_id: 'pl-4', user_id: 'u-d2' }]
+
+  // Client bookings: two waiting for an answer, one booked, one declined.
+  const booking = (row: Row): Row => ({
+    client_phone: null, organization: null, guests: null, client_notes: null, truck_id: null, manager_id: null, schedule_id: null,
+    contact_name: null, contact_phone: null, crew_notes: null, price: null, decision_message: null, decided_by: null, decided_at: null, ...row,
+  })
+  t.bookings = [
+    booking({
+      id: 'bk-1', status: 'pending', starts_at: at(6, 13), ends_at: at(6, 16), client_name: 'Pat Rivera', client_email: 'pat@example.com',
+      client_phone: '555 0142', organization: 'Oak Hill neighbors', event_name: 'Summer block party', place: '22 Oak Hill Dr', guests: 150,
+      client_notes: "We'd love shaved ice for the kids!", created_at: ago(2 * H),
+    }),
+    booking({
+      id: 'bk-2', status: 'pending', starts_at: at(9, 17), ends_at: at(9, 21), client_name: 'Dana Wells', client_email: 'dana@example.com',
+      event_name: 'Wedding reception', place: 'Maple Barn, 9 County Rd', guests: 120, created_at: ago(26 * H),
+    }),
+    booking({
+      id: 'bk-3', status: 'accepted', starts_at: at(4, 11), ends_at: at(4, 15), client_name: 'Ms. Lee', client_email: 'lee@example.com',
+      client_phone: '555 0177', organization: 'Lincoln Elementary', event_name: 'Field day', place: '400 Lincoln Ave', guests: 300,
+      truck_id: 'tr-1', manager_id: 'u-m1', schedule_id: 'pl-4', contact_name: 'Ms. Lee', contact_phone: '555 0177',
+      crew_notes: 'Park by the gym doors. Check in at the front office.', price: 450, decision_message: 'Thanks! See you then.',
+      decided_by: 'u-m1', decided_at: ago(3 * D), created_at: ago(5 * D),
+    }),
+    booking({
+      id: 'bk-4', status: 'declined', starts_at: at(3, 18), ends_at: at(3, 21), client_name: 'Chris Park', client_email: 'chris@example.com',
+      event_name: 'Birthday party', place: '5 Pine St', decision_message: "Sorry, we're booked that evening.", decided_by: 'u-admin',
+      decided_at: ago(2 * D), created_at: ago(4 * D),
+    }),
+  ]
+  t.booking_supplies = [
+    { booking_id: 'bk-3', supply_id: 's-cup-s', quantity: 400 },
+    { booking_id: 'bk-3', supply_id: 's-ice', quantity: 200 },
+    { booking_id: 'bk-3', supply_id: 's-cherry', quantity: 640 },
+  ]
 
   t.purchase_orders = [
     { id: 'po-1', supplier_id: 'sup-1', status: 'draft', edited: false, note: null, estimated_total: 38.4, created_at: ago(4 * H), approved_at: null, sent_at: null, received_at: null },

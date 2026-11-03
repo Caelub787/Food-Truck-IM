@@ -421,3 +421,69 @@ function addReportData(state) {
 }
 
 module.exports.addReportData = addReportData
+
+// Client bookings: the public page, one request waiting, and one booked event
+// that is today's open shift.
+function addBookingData(state) {
+  const t = state.tables
+  Object.assign(t.company_settings[0], {
+    scheduling_enabled: true, bookings_enabled: true, booking_slug: 'island-ice-co', booking_intro: 'We bring shaved ice to your event.',
+    booking_days: [0, 1, 2, 3, 4, 5, 6], booking_open: '10:00:00', booking_close: '21:00:00', booking_notice_days: 2, booking_ahead_days: 120,
+    booking_capacity: null,
+  })
+  const at = (dayOffset, hour) => {
+    const d = new Date()
+    d.setDate(d.getDate() + dayOffset)
+    d.setHours(hour, 0, 0, 0)
+    return d.toISOString()
+  }
+  const localDay = (offset) => {
+    const d = new Date()
+    d.setDate(d.getDate() + offset)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  const booking = (row) => ({
+    client_phone: null, organization: null, guests: null, client_notes: null, truck_id: null, manager_id: null, schedule_id: null, contact_name: null,
+    contact_phone: null, crew_notes: null, price: null, decision_message: null, decided_by: null, decided_at: null, created_at: at(0, 8), ...row,
+  })
+  t.bookings = [
+    booking({
+      id: 'bk-1', status: 'pending', starts_at: at(5, 13), ends_at: at(5, 16), client_name: 'Pat Rivera', client_email: 'pat@example.com',
+      client_phone: '555 0142', event_name: 'Summer block party', place: '22 Oak Hill Dr', guests: 150, client_notes: 'Shaved ice for the kids!',
+    }),
+    booking({
+      id: 'bk-3', status: 'accepted', starts_at: t.schedules[0].starts_at, ends_at: t.schedules[0].ends_at, client_name: 'Ms. Lee',
+      client_email: 'lee@example.com', event_name: 'Ball game', place: 'Riverside Park', schedule_id: 'pl-1', truck_id: 'tr-2', manager_id: 'u-m1',
+      contact_name: 'Ms. Lee', contact_phone: '555 0177', crew_notes: 'Park by gate B.', price: 450,
+    }),
+  ]
+  t.booking_supplies = [
+    { booking_id: 'bk-3', supply_id: 's-cup-s', quantity: 400 },
+    { booking_id: 'bk-3', supply_id: 's-ice', quantity: 200 },
+  ]
+  t.shifts.find((s) => s.id === 'sh-1').schedule_id = 'pl-1'
+
+  const log = (name, fn) => (args) => {
+    state.calls.push(name)
+    return fn(args ?? {})
+  }
+  Object.assign(state.rpcs, {
+    booking_page: ({ p_slug }) =>
+      p_slug === 'island-ice-co'
+        ? {
+            name: 'Island Ice Co', phone: '555 0100', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, intro: 'We bring shaved ice to your event.',
+            days: [0, 1, 2, 3, 4, 5, 6], open: '10:00', close: '21:00', first_day: localDay(2), last_day: localDay(120), capacity: 3, busy: [],
+          }
+        : null,
+    request_booking: log('request_booking', (args) => {
+      state.lastBooking = args
+      return { ok: true }
+    }),
+    decide_booking: log('decide_booking', ({ p }) => {
+      state.lastDecision = p
+      t.bookings.find((b) => b.id === p.booking_id).status = p.action === 'accept' ? 'accepted' : 'declined'
+      return null
+    }),
+  })
+}
+module.exports.addBookingData = addBookingData

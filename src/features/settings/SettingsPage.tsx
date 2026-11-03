@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { Toggle } from '@/components/forms'
+import { TextArea, Toggle } from '@/components/forms'
 import { Button, Card, Field, Notice, PageHeader, Select, Spinner } from '@/components/ui'
 import { useMeLoaded } from '@/features/auth/session'
 import { num } from '@/lib/data'
@@ -127,6 +127,7 @@ function SettingsForms({ settings }: { settings: Settings }) {
   }
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setS({ ...s, [key]: value })
   const features = useSaveSettings()
+  const bookings = useSaveSettings()
   const sales = useSaveSettings()
   const limits = useSaveSettings()
   const timing = useSaveSettings()
@@ -194,6 +195,84 @@ function SettingsForms({ settings }: { settings: Settings }) {
               hint="The manager's count replaces the driver's ending count for checked supplies."
               checked={s.count_check_manager_wins}
               onChange={(v) => set('count_check_manager_wins', v)}
+            />
+          </div>
+        )}
+      </Section>
+
+      <Section
+        title="Client bookings"
+        onSave={() =>
+          void bookings.run({
+            bookings_enabled: s.bookings_enabled,
+            booking_slug: s.booking_slug?.trim().toLowerCase() || null,
+            booking_intro: s.booking_intro?.trim() || null,
+            booking_days: s.booking_days,
+            booking_open: s.booking_open,
+            booking_close: s.booking_close,
+            booking_notice_days: s.booking_notice_days,
+            booking_ahead_days: s.booking_ahead_days,
+            booking_capacity: s.booking_capacity,
+          })
+        }
+        busy={bookings.busy}
+        error={bookings.error}
+        saved={bookings.saved}
+      >
+        <Toggle
+          label="Booking page"
+          hint="A page where your clients ask for a truck on a day and time. You accept or decline, and accepted ones go on the schedule. Turning this on also turns on scheduling."
+          checked={s.bookings_enabled}
+          onChange={(v) => set('bookings_enabled', v)}
+        />
+        {s.bookings_enabled && (
+          <div className="flex flex-col gap-4">
+            <Field
+              label="Page name"
+              hint={`Your page will be at ${window.location.origin}/book/${s.booking_slug || 'your-name'}. Leave it empty to make one from your business name.`}
+              value={s.booking_slug ?? ''}
+              onChange={(e) => set('booking_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              maxLength={60}
+            />
+            <TextArea
+              label="Message at the top of the page (optional)"
+              rows={3}
+              maxLength={1000}
+              placeholder="We bring shaved ice to schools, parties, and events. Pick a day and tell us about it!"
+              value={s.booking_intro ?? ''}
+              onChange={(e) => set('booking_intro', e.target.value)}
+            />
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-slate-700">Days you take bookings</p>
+              <div className="flex flex-wrap gap-2">
+                {days.map((d, i) => {
+                  const on = s.booking_days.includes(i)
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => set('booking_days', on ? s.booking_days.filter((x) => x !== i) : [...s.booking_days, i].sort())}
+                      className={`min-h-11 rounded-full px-4 font-medium ${on ? 'bg-brand-700 text-white' : 'bg-white ring-1 ring-slate-200 hover:bg-slate-50'}`}
+                    >
+                      {d.slice(0, 3)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Earliest start" type="time" step={1800} value={s.booking_open.slice(0, 5)} onChange={(e) => set('booking_open', e.target.value)} />
+              <Field label="Latest end" type="time" step={1800} value={s.booking_close.slice(0, 5)} onChange={(e) => set('booking_close', e.target.value)} />
+              <Field label="Days of notice needed" inputMode="numeric" value={String(s.booking_notice_days)} onChange={numberField('booking_notice_days')} />
+              <Field label="Days ahead people can book" inputMode="numeric" value={String(s.booking_ahead_days)} onChange={numberField('booking_ahead_days')} />
+            </div>
+            <Field
+              label="Events at the same time"
+              hint="Leave empty to use your number of trucks."
+              inputMode="numeric"
+              value={s.booking_capacity != null ? String(s.booking_capacity) : ''}
+              onChange={(e) => set('booking_capacity', num(e.target.value))}
             />
           </div>
         )}
